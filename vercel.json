@@ -3,17 +3,23 @@
   "builds": [
     { "src": "api/[...route].mjs", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "features.html", "use": "@vercel/static" },
+    { "src": "login.html", "use": "@vercel/static" },
     { "src": "app.html", "use": "@vercel/static" },
     { "src": "app.js", "use": "@vercel/static" },
     { "src": "styles.css", "use": "@vercel/static" },
-    { "src": "landing.css", "use": "@vercel/static" }
+    { "src": "marketing.css", "use": "@vercel/static" },
+    { "src": "assets/**", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "^/api(?:/(.*))?$", "dest": "/api/[...route].mjs" },
     { "src": "^/$", "dest": "/index.html" },
+    { "src": "^/features$", "dest": "/features.html" },
+    { "src": "^/login$", "dest": "/login.html" },
     { "src": "^/app\\.js$", "dest": "/app.js" },
     { "src": "^/styles\\.css$", "dest": "/styles.css" },
-    { "src": "^/landing\\.css$", "dest": "/landing.css" },
+    { "src": "^/marketing\\.css$", "dest": "/marketing.css" },
+    { "src": "^/assets/(.*)$", "dest": "/assets/$1" },
     { "src": "^/(.*)$", "dest": "/app.html" }
   ]
 }

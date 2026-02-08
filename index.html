@@ -4,38 +4,42 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RecruiterIQ: Evidence-First Recruiting Inbox</title>
-  <link rel="stylesheet" href="/landing.css" />
+  <meta name="description" content="Evidence-first Inbox fuer Recruiter: Claims/Evidence, Proof-of-Work, Scorecards, HM-Queue, Audit und Exporte." />
+  <meta property="og:title" content="RecruiterIQ: Evidence-First Recruiting Inbox" />
+  <meta property="og:description" content="KI macht Bewerbungen perfekt. RecruiterIQ macht sie pruefbar: Evidence Pack, Proof-of-Work, Workflow bis zur Entscheidung." />
+  <meta property="og:image" content="/assets/agent-template-og.png" />
+  <link rel="stylesheet" href="/marketing.css" />
 </head>
 <body>
   <div class="wrap">
     <div class="top">
-      <div class="brand">
+      <a class="brand" href="/" aria-label="RecruiterIQ Landing">
         <div class="logo" aria-hidden="true"></div>
         <div>
           <strong>RecruiterIQ</strong>
           <div style="color:rgba(233,238,252,.62);font-size:12px">Recruiting OS Prototyp</div>
         </div>
-      </div>
+      </a>
       <div class="topnav">
-        <a class="btn" href="#features">Features</a>
         <a class="btn" href="#usps">USPs</a>
-        <a class="btn primary" href="/dashboard">Demo öffnen</a>
+        <a class="btn" href="/features">Features</a>
+        <a class="btn primary" href="/login">Login</a>
       </div>
     </div>
 
     <div class="hero">
       <div class="card heroL">
         <div class="kicker">EVIDENCE-FIRST · ANTI-TEMPLATE · LOCAL-LLM OPTIONAL</div>
-        <h1>Bewerbungen werden "perfekt". Wir machen sie überprüfbar.</h1>
+        <h1>KI macht Bewerbungen perfekt. RecruiterIQ macht sie prüfbar.</h1>
         <div class="sub">
           Recruiter bekommen immer mehr KI-optimierte Bewerbungen. RecruiterIQ sortiert nicht nach "KI-Erkennung",
-          sondern nach <strong>Belegbarkeit</strong>: Claims, Evidence, Widersprüche, Proof-of-Work und klare nächste Schritte.
+          sondern nach <strong>Belegbarkeit</strong>: Claims, Evidence, Widersprüche, Proof-of-Work, Scorecards und klare nächste Schritte.
         </div>
 
         <div class="cta">
-          <a class="btn primary" href="/inbox">Inbox Demo</a>
-          <a class="btn" href="/worklist">Worklist</a>
-          <a class="btn" href="/hm">Hiring Manager Portal</a>
+          <a class="btn primary" href="/login?next=%2Finbox">Inbox öffnen</a>
+          <a class="btn" href="/features">Features ansehen</a>
+          <a class="btn ghost" href="/login">Login</a>
         </div>
 
         <div class="metaRow">
@@ -46,6 +50,7 @@
       </div>
 
       <div class="card heroR">
+        <div class="bgArt" aria-hidden="true"></div>
         <div class="section">
           <h2>Was du in 5 Minuten siehst</h2>
           <div class="list">
@@ -68,6 +73,10 @@
             </ul>
           </div>
         </div>
+        <div class="callout">
+          <div class="calloutTitle">Kein "AI detection".</div>
+          <div class="calloutBody">Wir bewerten Signalqualität: Evidence, Konsistenz, Ownership. Proof-of-Work liefert harte Daten statt perfekter Formulierungen.</div>
+        </div>
       </div>
     </div>
 
@@ -86,25 +95,41 @@
       </div>
     </div>
 
-    <div class="card list section" id="features">
-      <h2>Features (Auszug)</h2>
-      <ul>
-        <li><strong>Worklist</strong>: New / Needs Info / Waiting HM / Assessment Due</li>
-        <li><strong>Inbox</strong>: Filter, Pagination, Batch Status, Notes, Audit-Trail</li>
-        <li><strong>Triage</strong>: Must-have Gate, Fit/Evidence/TemplateRisk Scores, Flags</li>
-        <li><strong>Duplikate</strong>: Clustering (REP/DUP) pro Job + Hinweise auf gleiche Namen</li>
-        <li><strong>Kommunikation</strong>: Template-Send mit Variablen (z.B. <span class="mono">{{candidateName}}</span>)</li>
-        <li><strong>Sequences</strong>: Drip-Kampagnen + "Run due" Scheduler-Simulation</li>
-        <li><strong>Proof-of-Work</strong>: öffentliche Assessment-Links + Completion Tracking</li>
-        <li><strong>HM Portal</strong>: Queue + Approve/Hold/Reject</li>
-        <li><strong>Integrationen (Stub)</strong>: CSV Import/Export (ATS) + Audit Export</li>
-        <li><strong>Local LLM optional</strong>: via Ollama für Enrichment, nicht zwingend nötig</li>
-      </ul>
+    <div class="card section" style="padding:16px">
+      <h2>High-level USPs</h2>
+      <div class="bento">
+        <div class="card span2">
+          <h3 style="margin:0 0 6px;font-size:15px">Evidence Pack</h3>
+          <div class="sub" style="font-size:13px;max-width:none">Strongest/weakest Claims + Evidence-Gaps. Du siehst in Sekunden, was belastbar ist und was nur sauber formuliert.</div>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 6px;font-size:15px">Flags</h3>
+          <div class="sub" style="font-size:13px;max-width:none">Buzzwords ohne Evidence, Zeitlinien-Widersprüche, Portfolio ohne Link.</div>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 6px;font-size:15px">Proof-of-Work</h3>
+          <div class="sub" style="font-size:13px;max-width:none">Öffentlicher Link, Aufgaben, Antworten. Harte Signale statt perfekte Texte.</div>
+        </div>
+        <div class="card span2">
+          <h3 style="margin:0 0 6px;font-size:15px">Workflow bis zur Entscheidung</h3>
+          <div class="sub" style="font-size:13px;max-width:none">Inbox, Templates, Sequences, HM-Queue, Scorecards, Audit und Exporte sind ein Flow.</div>
+        </div>
+        <div class="card span3">
+          <h3 style="margin:0 0 6px;font-size:15px">Ready für XING (Sales-Story)</h3>
+          <div class="sub" style="font-size:13px;max-width:none">
+            Für Recruiter/HR als Add-on: reduziert Time-to-First-Review, erhöht Signalqualität, macht Hiring-Manager Entscheidungen schneller und nachvollziehbar.
+          </div>
+        </div>
+      </div>
+      <div class="cta" style="margin-top:12px">
+        <a class="btn primary" href="/features">Zu den Features</a>
+        <a class="btn" href="/login">Zum Login</a>
+      </div>
     </div>
 
     <div class="footer">
-      <div>Prototype. Fokus: schnelle Demo, klare USPs, evidence-first Filterung.</div>
-      <div><a href="/dashboard">Demo öffnen</a> · <a href="/inbox">Inbox</a> · <a href="/triage">Triage</a></div>
+      <div>Prototype. Fokus: klassische Landing + Features + Login-Gate.</div>
+      <div><a href="/features">Features</a> · <a href="/login">Login</a></div>
     </div>
   </div>
 </body>

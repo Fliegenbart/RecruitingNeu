@@ -1181,8 +1181,12 @@ const handler = async (req, res) => {
   }
 
   if (path === '/' || path === '/index.html') return serveStatic(res, '/');
+  if (path === '/features') return serveStatic(res, '/features.html');
+  if (path === '/login') return serveStatic(res, '/login.html');
+  if (path === '/features.html' || path === '/login.html') return serveStatic(res, path);
   if (path === '/app.html') return serveStatic(res, '/app.html');
-  if (path === '/app.js' || path === '/styles.css' || path === '/landing.css') return serveStatic(res, path);
+  if (path === '/app.js' || path === '/styles.css' || path === '/marketing.css') return serveStatic(res, path);
+  if (path.startsWith('/assets/')) return serveStatic(res, path);
 
   // SPA fallback: app shell for all non-API routes.
   return serveStatic(res, '/app.html');

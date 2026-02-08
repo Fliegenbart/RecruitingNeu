@@ -27,6 +27,8 @@ const pathRoute = () => {
 let current = pathRoute();
 let state={};
 
+const isAuthed = () => localStorage.getItem('rx_auth') === '1';
+
 const authHeader = () => {
   const uid = state?.auth?.userId || localStorage.getItem('rx_user') || '';
   return uid ? { 'X-User-Id': uid } : {};
@@ -1756,6 +1758,11 @@ async function loadTriage(){
 }
 
 async function render(){
+  if (current !== 'assessment' && !isAuthed()) {
+    const next = encodeURIComponent(location.pathname + (location.search || ''));
+    location.href = '/login?next=' + next;
+    return;
+  }
   const sidebarButtons = routes
     .filter(([id]) => id !== 'assessment')
     .map(([id,l])=>`<button data-route='${id}'>${l}</button>`)
@@ -1771,6 +1778,7 @@ async function render(){
           <div class='small'>/${current}</div>
           <div class='row' style='margin-top:0'>
             <select id='userSelect' style='max-width:260px'></select>
+            <button class='btn' id='logoutBtn'>Logout</button>
           </div>
         </div>
         <div id='view'>Lade...</div>
@@ -1789,6 +1797,12 @@ async function render(){
 
   // User selector
   const $us = document.getElementById('userSelect');
+  const $logout = document.getElementById('logoutBtn');
+  if ($logout) $logout.onclick = () => {
+    localStorage.removeItem('rx_auth');
+    localStorage.removeItem('rx_auth_at');
+    location.href = '/';
+  };
   const users = state.pilot?.context?.data?.users || [];
   if (current === 'assessment') {
     $us.innerHTML = `<option value=''>Public</option>`;
