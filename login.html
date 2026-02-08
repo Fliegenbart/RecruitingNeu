@@ -32,13 +32,13 @@
         <div class="callout" style="position:relative;inset:auto;box-shadow:none;margin-top:12px">
           <div class="calloutTitle">Warum Login?</div>
           <div class="calloutBody">
-            In der Produktversion: Teams, Rollen, Audit, Datenzugriff. Im Prototype: simples Gate, damit Landing/Features davor liegen.
+            In der Produktversion: Teams, Rollen, Audit, Datenzugriff. Im Prototype: ein simples Gate, damit Landing/Features „davor“ liegen.
           </div>
         </div>
         <div class="callout" style="position:relative;inset:auto;box-shadow:none;margin-top:10px">
           <div class="calloutTitle">Demo-Accounts</div>
           <div class="calloutBody">
-            Du kannst nach Login in der App oben rechts User/Role wechseln (Recruiter/Hiring Manager/Admin).
+            Nach dem Login können Sie in der App oben rechts User/Rollen wechseln (Recruiter/Hiring Manager/Admin).
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@
         const pw = (document.getElementById('pw').value || '').trim();
         if (pw !== 'demo') {
           $err.style.display = 'block';
-          $err.textContent = 'Falsches Passwort. Nutze fuer die Demo: demo';
+          $err.textContent = 'Falsches Passwort. Nutzen Sie fuer die Demo: demo';
           return;
         }
         localStorage.setItem('rx_auth', '1');

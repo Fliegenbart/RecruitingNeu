@@ -55,10 +55,12 @@ a{color:inherit}
   background:#ffffff;
   color:var(--text);text-decoration:none;
   font-weight:800;
+  box-shadow: 0 1px 0 rgba(255,255,255,.65), 0 10px 26px rgba(8,12,24,.06);
 }
 .btn.primary{
   border-color: rgba(31,215,176,.45);
   background: linear-gradient(135deg, rgba(31,215,176,.22), rgba(63,124,255,.14));
+  box-shadow: 0 1px 0 rgba(255,255,255,.65), 0 16px 34px rgba(31,215,176,.12);
 }
 .btn.ghost{
   background: transparent;
@@ -73,6 +75,10 @@ a{color:inherit}
   box-shadow: var(--shadow);
 }
 
+.card:hover{
+  box-shadow: 0 26px 90px rgba(8,12,24,.12);
+}
+
 .kicker{
   display:inline-flex;gap:8px;align-items:center;
   padding:6px 10px;border-radius:999px;
@@ -80,6 +86,12 @@ a{color:inherit}
   color:rgba(11,16,32,.72);
   background: rgba(31,215,176,.10);
   font-weight:900;font-size:12px;letter-spacing:.25px;
+}
+
+.hr{
+  height:1px;
+  background: linear-gradient(90deg, transparent, rgba(11,16,32,.10), transparent);
+  margin: 28px 0;
 }
 
 .hero{
@@ -122,6 +134,51 @@ h1{
 .heroCenterInner .cta{justify-content:center}
 .heroCenterInner .metaRow{justify-content:center}
 
+.eyebrowRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top: 8px;
+}
+.eyebrow{
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.22px;
+  color: rgba(11,16,32,.62);
+  border: 1px solid rgba(11,16,32,.12);
+  background: rgba(255,255,255,.72);
+  padding: 7px 10px;
+  border-radius: 999px;
+}
+
+.logoMarquee{
+  margin-top: 18px;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(230,232,245,.9);
+  border-radius: 999px;
+  background: rgba(255,255,255,.72);
+}
+.logoTrack{
+  display:flex;
+  gap: 26px;
+  padding: 10px 16px;
+  width: max-content;
+  animation: marquee 26s linear infinite;
+}
+.logoTag{
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .18px;
+  color: rgba(11,16,32,.60);
+  white-space: nowrap;
+}
+@keyframes marquee{
+  from{ transform: translateX(0); }
+  to{ transform: translateX(-50%); }
+}
+
 .productCard{padding:22px}
 .productGrid{
   display:grid;
@@ -139,6 +196,113 @@ h1{
 .productArt img{width:100%;height:auto;display:block}
 .productCopy h2{margin:0 0 10px;font-size:18px;letter-spacing:.2px}
 .productCopy .sub{font-size:14px;max-width:none}
+
+.sectionHeader{
+  margin-top: 34px;
+}
+.sectionHeader h2{
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -.2px;
+}
+.sectionHeader p{
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.steps{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+.step{
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(11,16,32,.02), rgba(11,16,32,.00));
+}
+.stepNum{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 900;
+  color: rgba(11,16,32,.78);
+  border: 1px solid rgba(11,16,32,.12);
+  background: rgba(255,255,255,.80);
+}
+.step h3{
+  margin: 10px 0 6px;
+  font-size: 14px;
+  letter-spacing: .1px;
+}
+.step p{
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+.stat{
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(251,252,255,.80));
+}
+.statVal{
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -.3px;
+}
+.statLbl{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ctaBanner{
+  position:relative;
+  overflow:hidden;
+  padding: 22px;
+  margin-top: 22px;
+  background: linear-gradient(135deg, rgba(31,215,176,.10), rgba(63,124,255,.08));
+}
+.ctaBanner::before{
+  content:"";
+  position:absolute;
+  inset:-20px;
+  background-image: url("/assets/agent-cta-background.png");
+  background-size: cover;
+  background-position: center;
+  opacity: .09;
+  filter: saturate(1.04) contrast(1.02);
+}
+.ctaBannerInner{
+  position:relative;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ctaBannerInner h3{
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: -.1px;
+}
+.ctaBannerInner .sub{
+  margin-top: 6px;
+  font-size: 13px;
+  max-width: 70ch;
+}
 
 .sub{color:var(--muted);font-size:16px;line-height:1.55;max-width:64ch}
 
@@ -226,4 +390,7 @@ input:focus, textarea:focus, select:focus{border-color: rgba(31,215,176,.42); bo
   .bento .span2,.bento .span3{grid-column: span 1}
   .heroCenter{padding:56px 0 18px}
   .productGrid{grid-template-columns: 1fr}
+  .steps{grid-template-columns: 1fr}
+  .stats{grid-template-columns: 1fr}
+  .logoTrack{animation-duration: 20s}
 }
