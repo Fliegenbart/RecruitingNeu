@@ -193,7 +193,7 @@ const serveStatic = async (res, path) => {
     // Only these 3 are served directly; all other paths fall back to index.html (SPA routing).
     const filePath = path === '/' ? 'index.html' : String(path || '').replace(/^\/+/, '');
     const content = await readFile(join(process.cwd(), filePath));
-    const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
+    const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.ico': 'image/x-icon', '.webp': 'image/webp' };
     const ct = types[extname(filePath)] || 'text/plain';
     if (typeof res.writeHead === 'function') res.writeHead(200, { 'Content-Type': ct });
     else {
