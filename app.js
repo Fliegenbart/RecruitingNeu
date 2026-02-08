@@ -943,6 +943,15 @@ async function loadInbox(){
     <div class='small' style='margin-bottom:8px'>Alle Bewerbungen fuer einen Job. Filtere nach Status oder Must-haves, klicke auf einen Kandidaten fuer die Detail-Analyse mit Evidence Pack, Claims und Scorecard.</div>
 
     <div class='card' style='margin-top:12px'>
+      <div class='row' style='justify-content:space-between;align-items:flex-end'>
+        <div>
+          <div class='small'>Modus</div>
+          <label class='small' style='display:flex;gap:8px;align-items:center;margin-top:6px'>
+            <input type='checkbox' id='inboxFast'/> Fast Triage (Must-have PASS zuerst + One-click Actions)
+          </label>
+        </div>
+        <div class='small' id='inboxFastHint'></div>
+      </div>
       <div class='grid3'>
         <div>
           <div class='small'>Tenant</div>
@@ -1035,6 +1044,8 @@ async function loadInbox(){
     const $q = document.getElementById('inboxSearch');
     const $sort = document.getElementById('inboxSort');
     const $collapsed = document.getElementById('inboxCollapsed');
+    const $fast = document.getElementById('inboxFast');
+    const $fastHint = document.getElementById('inboxFastHint');
     const $meta = document.getElementById('inboxMeta');
     const $wrap = document.getElementById('inboxTableWrap');
     const $detail = document.getElementById('inboxDetail');
@@ -1157,6 +1168,7 @@ async function loadInbox(){
       if (!list) return `<div class='small'>Keine Daten.</div>`;
       const items = list.items || [];
       if (!items.length) return `<div class='small'>Keine Bewerbungen im aktuellen Filter.</div>`;
+      const fastOn = Boolean(state.pilot.fast);
       return `
         <table class='table'>
           <tr>
@@ -1168,6 +1180,7 @@ async function loadInbox(){
             <th>TemplateRisk</th>
             <th>Must-have</th>
             <th>Cluster</th>
+            ${fastOn ? `<th>Quick</th>` : ``}
           </tr>
           ${items.map(a=>`
             <tr class='click' data-app='${esc(a.id)}'>
@@ -1182,6 +1195,16 @@ async function loadInbox(){
               <td>${badgeScore(a.scores?.templateRisk || 0, false)}</td>
               <td>${a.mustHavePassed===null ? `<span class='small'>-</span>` : a.mustHavePassed ? `<span class='pill good'>PASS</span>` : `<span class='pill bad'>FAIL</span>`}</td>
               <td>${a.clusterId ? `<span class='pill ${a.isClusterRepresentative?'good':'warn'}'>${esc(a.isClusterRepresentative?'REP':'DUP')}</span>` : `<span class='small'>-</span>`}</td>
+              ${fastOn ? `
+                <td>
+                  <div class='row' style='margin-top:0;gap:6px'>
+                    <button class='btn qa' data-qa='reject' data-id='${esc(a.id)}' style='padding:6px 8px'>Reject</button>
+                    <button class='btn qa' data-qa='needs' data-id='${esc(a.id)}' style='padding:6px 8px'>Needs info</button>
+                    <button class='btn qa' data-qa='pow' data-id='${esc(a.id)}' style='padding:6px 8px'>PoW</button>
+                    <button class='btn primary qa' data-qa='shortlist' data-id='${esc(a.id)}' style='padding:6px 8px'>Shortlist</button>
+                  </div>
+                </td>
+              ` : ``}
             </tr>
           `).join('')}
         </table>
@@ -1475,6 +1498,7 @@ async function loadInbox(){
         tr.addEventListener('click', async (e) => {
           // ignore click on checkbox
           if (e?.target?.classList?.contains('inboxSel') || e?.target?.id === 'inboxSelectAll') return;
+          if (e?.target?.closest?.('.qa')) return;
           const id = tr.dataset.app;
           state.pilot.selectedAppId = id;
           const detailUrl = () => `/api/pilot/applications/${id}?tenantId=${encodeURIComponent(state.pilot.tenantId)}`;
@@ -1609,6 +1633,45 @@ async function loadInbox(){
           await showDetail();
         });
       });
+
+      // Fast triage: one-click actions
+      $wrap.querySelectorAll('button.qa[data-qa]').forEach((btn) => {
+        btn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const kind = btn.dataset.qa;
+          if (!id || !kind) return;
+
+          const tenantId = state.pilot.tenantId;
+          const ctx = state.pilot.context?.data || {};
+          const templates = (ctx.templates || []).filter((t) => t.tenantId === tenantId);
+          const needsTpl = templates.find((t) => String(t.name).toLowerCase().includes('needs info')) || templates[0] || null;
+
+          if (kind === 'reject') {
+            await fetchJSON(`/api/pilot/applications/${id}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId, status:'rejected'})});
+          } else if (kind === 'shortlist') {
+            await fetchJSON(`/api/pilot/applications/${id}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId, status:'shortlisted'})});
+          } else if (kind === 'pow') {
+            const res = await fetchJSON(`/api/pilot/applications/${id}/assessment/send`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId})});
+            // keep it quiet for speed; details show link
+            if (!res?.success) alert(res?.error || 'Fehler');
+          } else if (kind === 'needs') {
+            if (!needsTpl) return alert('Kein Template gefunden');
+            const payload = {
+              tenantId,
+              applicationId: id,
+              templateId: needsTpl.id,
+              variables: { question: 'Bitte senden Sie 1-2 Links (Repo/Portfolio/Case Study) und 2 konkrete Beispiele mit Metriken, die Ihren Impact belegen.' },
+              setStatus: 'needs_info'
+            };
+            const res = await fetchJSON('/api/pilot/messages/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+            if (!res?.success) alert(res?.error || 'Fehler');
+          }
+
+          await refresh();
+        };
+      });
     };
 
     $tenant.onchange = async () => {
@@ -1666,6 +1729,22 @@ async function loadInbox(){
     const shot = urlParams.get('shot'); // e.g. ?shot=detail for stable screenshots
     const appId = urlParams.get('appId');
 
+    // Fast triage default (persisted). Can be disabled by user.
+    state.pilot.fast = localStorage.getItem('rx_fast') !== '0';
+    $fast.checked = Boolean(state.pilot.fast);
+    $fastHint.textContent = state.pilot.fast ? 'Tipp: Nutzen Sie Quick Actions rechts in der Tabelle.' : '';
+    $fast.onchange = async () => {
+      state.pilot.fast = $fast.checked;
+      localStorage.setItem('rx_fast', state.pilot.fast ? '1' : '0');
+      if (state.pilot.fast) {
+        state.pilot.filters.mustHave = 'pass';
+        state.pilot.filters.sort = 'overall_desc';
+        state.pilot.filters.collapsedClusters = true;
+        state.pilot.filters.page = 1;
+      }
+      await refresh();
+    };
+
     if (shot === 'detail') {
       // Stable, "hero-shot" friendly default.
       state.pilot.filters.status = '';
@@ -1678,6 +1757,12 @@ async function loadInbox(){
     }
 
     (async () => {
+      // Apply fast triage defaults once on page enter.
+      if (state.pilot.fast) {
+        state.pilot.filters.mustHave = 'pass';
+        state.pilot.filters.sort = 'overall_desc';
+        state.pilot.filters.collapsedClusters = true;
+      }
       await refresh();
 
       if (appId) {
