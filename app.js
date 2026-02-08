@@ -1,27 +1,14 @@
 const sections = [
-  { label: 'Recruiting', items: [
-    ['dashboard', 'Dashboard', 'KPIs, Funnel und Pipeline-Health auf einen Blick.'],
-    ['inbox', 'Inbox', 'Bewerbungen sichten, bewerten und weiterleiten.'],
-    ['worklist', 'Worklist', 'Deine priorisierten Aufgaben fuer heute.'],
-    ['pipeline', 'Pipeline', 'Deal-Scores, Ghosting-Alerts und Stage-Tracking.'],
+  { label: null, items: [
+    ['dashboard', 'Dashboard', 'Was heute ansteht und wie dein Recruiting laeuft.'],
+    ['inbox', 'Inbox', 'Bewerbungen sichten, KI-Score sehen, entscheiden.'],
+    ['nachrichten', 'Nachrichten', 'KI-Copilot und Vorlagen fuer Kandidaten-Ansprache.'],
+    ['hm', 'Hiring Manager', 'Shortlist mit Evidence Pack an den HM uebergeben.'],
   ]},
-  { label: 'Kommunikation', items: [
-    ['copilot', 'KI-Copilot', 'Personalisierte Nachrichten in 3 Tonalitaeten generieren.'],
-    ['templates', 'Vorlagen', 'E-Mail- und LinkedIn-Templates mit Variablen.'],
-    ['sequences', 'Sequenzen', 'Automatische Drip-Kampagnen fuer Follow-ups.'],
-  ]},
-  { label: 'Analyse', items: [
-    ['triage', 'Bewerbungs-Triage', 'KI-gestuetzte Claim-to-Evidence Analyse.'],
-    ['analytics', 'Analytics', 'Time-to-Review, Conversion und Quality-Metriken.'],
-    ['hm', 'HM-Portal', 'Shortlist fuer Hiring Manager mit Evidence Pack.'],
-  ]},
-  { label: 'Weiteres', items: [
-    ['market', 'Marktdaten', 'Talent-Dichte, Gehaelter und Remote-Readiness pro Region.'],
-    ['agent', 'Kandidatensuche', 'Automatisierte Suche und Shortlist-Erstellung.'],
-    ['talent-pool', 'Talent Pool', 'Silbermedaillen-Kandidaten reaktivieren.'],
-    ['interviews', 'Interviews', 'Interview-Analyse und Compensation-Fit.'],
-    ['companies', 'Unternehmen', 'Hiring Manager Quality Scores.'],
-    ['integrations', 'Import / Export', 'CSV-Import, Datenexport und ATS-Anbindung.'],
+  { label: 'Einstellungen', items: [
+    ['analytics', 'Analytics', 'Metriken und Auswertungen.'],
+    ['sequences', 'Sequenzen', 'Automatische Follow-up-Ketten.'],
+    ['integrations', 'Import / Export', 'CSV-Import und Datenexport.'],
   ]},
 ];
 
@@ -59,7 +46,6 @@ const fetchJSON = (url, opts={}) => {
   const headers = { ...(opts.headers || {}), ...authHeader() };
   return fetch(url, { ...opts, headers }).then(r=>r.json());
 };
-const badge = (v)=> v>70?'<span class="badge green">'+v+'</span>':v>=40?'<span class="badge yellow">'+v+'</span>':'<span class="badge red">'+v+'</span>';
 const badgeScore = (v, goodHigh=true)=>{
   const n = Number(v || 0);
   const score = goodHigh ? n : (100 - n);
@@ -86,36 +72,44 @@ async function ensurePilotContext(){
 }
 
 async function loadHome(){
-  const cards = sections.map(s => `
-    <div style='margin-top:28px'>
-      <div style='font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);margin-bottom:10px'>${esc(s.label)}</div>
-      <div class='cards' style='grid-template-columns:repeat(auto-fill,minmax(260px,1fr))'>
-        ${s.items.map(([id, label, desc]) => `
-          <div class='card click' data-goto='${esc(id)}' style='cursor:pointer'>
-            <div style='font-size:16px;font-weight:600;margin-bottom:4px'>${esc(label)}</div>
-            <div class='small'>${esc(desc)}</div>
+  const steps = [
+    ['inbox', 'Inbox oeffnen', 'Bewerbungen durchgehen, KI-Scores sehen, Kandidaten bewerten.'],
+    ['nachrichten', 'Nachricht schreiben', 'Per KI-Copilot personalisierte Nachrichten generieren.'],
+    ['hm', 'An Hiring Manager', 'Shortlist mit Evidence Pack uebergeben, Entscheidung einholen.'],
+    ['dashboard', 'Fortschritt pruefen', 'KPIs und heutige Aufgaben im Blick behalten.'],
+  ];
+
+  const html = `
+    <div style='max-width:720px;margin:40px auto 0'>
+      <div style='text-align:center'>
+        <h2 style='font-size:32px;letter-spacing:-0.8px;margin:0'>Weniger raten. Besser einstellen.</h2>
+        <div style='color:var(--text-secondary);margin-top:8px;font-size:16px;line-height:1.5'>
+          RecruiterIQ analysiert Bewerbungen auf echte Belege statt Bauchgefuehl.<br/>
+          Claims werden geprueft, Skills gematcht, Risiken erkannt.
+        </div>
+      </div>
+      <div style='margin-top:40px;display:flex;flex-direction:column;gap:8px'>
+        ${steps.map(([id, title, desc], i) => `
+          <div class='card click' data-goto='${esc(id)}' style='cursor:pointer;display:flex;align-items:center;gap:16px;padding:16px 20px'>
+            <div style='width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0'>${i+1}</div>
+            <div>
+              <div style='font-weight:600;font-size:15px'>${esc(title)}</div>
+              <div class='small' style='margin-top:2px'>${esc(desc)}</div>
+            </div>
           </div>
         `).join('')}
       </div>
-    </div>
-  `).join('');
-
-  const html = `
-    <div style='max-width:900px'>
-      <h2 style='font-size:28px;letter-spacing:-0.5px'>RecruiterIQ</h2>
-      <div style='color:var(--text-secondary);margin-top:4px'>
-        Evidence-first Recruiting Intelligence. Waehle einen Bereich, um loszulegen.
+      <div style='margin-top:40px;text-align:center'>
+        <div class='small'>Tipp: Die KI-Features (Skill-Matching, Zusammenfassung, Nachrichten) werden staerker mit einem lokalen LLM via Ollama. Ohne LLM funktioniert alles mit Heuristiken.</div>
       </div>
-      ${cards}
     </div>
   `;
 
   const afterRender = () => {
     document.querySelectorAll('[data-goto]').forEach(el => {
       el.onclick = () => {
-        const id = el.dataset.goto;
-        current = id;
-        history.pushState({}, '', '/' + id);
+        current = el.dataset.goto;
+        history.pushState({}, '', '/' + current);
         render();
       };
     });
@@ -125,316 +119,240 @@ async function loadHome(){
 }
 
 async function loadDashboard(){
-  const [kpi,funnel] = await Promise.all([fetchJSON('/api/dashboard/kpis/r1'), fetchJSON('/api/dashboard/funnel/r1')]);
-  return `<h2>Dashboard</h2><div class='small' style='margin-bottom:16px'>Deine wichtigsten KPIs und der aktuelle Recruiting-Funnel.</div><div class="cards">${Object.entries(kpi.data).map(([k,v])=>`<div class='card'><div class='small'>${k}</div><div style='font-size:24px'>${v}</div></div>`).join('')}</div>
-  <div class='card' style='margin-top:12px'><h3>Funnel</h3><table class='table'><tr><th>Stufe</th><th>Anzahl</th><th>Conversion</th></tr>${funnel.data.map(f=>`<tr><td>${f.stage}</td><td>${f.count}</td><td>${Math.round(f.conversion*100)}%</td></tr>`).join('')}</table></div>`;
-}
-
-async function loadPipeline(){
-  const [entries,alerts]=await Promise.all([fetchJSON('/api/pipeline/job1'),fetchJSON('/api/alerts/ghosting/r1')]);
-  return `<h2>Pipeline</h2><div class='small' style='margin-bottom:16px'>Jeder Kandidat hat einen Deal-Score (Abschlusswahrscheinlichkeit) und Ghosting-Risk. Rot = Handlungsbedarf.</div>
-    <div class='card'>Aktive Alerts: ${alerts.data.length}</div>
-    <div class='card' style='margin-top:12px'><table class='table'><tr><th>Entry</th><th>Stage</th><th>Deal</th><th>Ghosting</th></tr>${entries.data.slice(0,12).map(e=>`<tr><td>${e.id}</td><td>${e.stage}</td><td>${badge(e.deal_probability_score)}</td><td>${badge(e.ghosting_risk_score)}</td></tr>`).join('')}</table></div>`;
-}
-
-async function loadCopilot(){
-  const html = `
-    <h2>KI-Copilot</h2>
-    <div class='small' style='margin-bottom:8px'>Waehle einen Kandidaten und Job, und der Copilot generiert 3 personalisierte Nachrichten (direkt, beratend, visionaer). Mit lokalem LLM werden die Texte individuell formuliert, ohne LLM kommen Fallback-Templates.</div>
-    <div class='card' style='margin-top:12px'>
-      <div class='grid3'>
-        <div><div class='small'>Kandidat</div><select id='copilotCand'></select></div>
-        <div><div class='small'>Job</div><select id='copilotJob'></select></div>
-        <div><div class='small'>Kontext (optional)</div><input id='copilotCtx' placeholder='z.B. Referral von Max'/></div>
-      </div>
-      <div class='row'><button class='btn primary' id='copilotGenBtn'>Nachrichten generieren</button><span class='small' id='copilotLLM'></span></div>
-    </div>
-    <div id='copilotOut' style='margin-top:12px'><div class='card'><div class='small'>Klicke "Generieren" um 3 Nachrichten zu erzeugen.</div></div></div>
-  `;
-  const afterRender = () => {
-    const $cand = document.getElementById('copilotCand');
-    const $job = document.getElementById('copilotJob');
-    const $ctx = document.getElementById('copilotCtx');
-    const $out = document.getElementById('copilotOut');
-    const $llm = document.getElementById('copilotLLM');
-    const $btn = document.getElementById('copilotGenBtn');
-    const cands = Array.from({length:10},(_,i)=>({id:'cand'+(i+1),name:['Luca Fischer','Emma Richter','Noah Hofmann','Mia Becker','Paul Wagner','Lina Schulz','Elias Neumann','Hannah Wolf','Felix Klein','Clara Schreiber'][i]}));
-    const jobsList = Array.from({length:5},(_,i)=>({id:'job'+(i+1),title:['Software Engineer','Product Manager','Data Scientist','Sales Manager','DevOps Engineer'][i]}));
-    $cand.innerHTML = cands.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
-    $job.innerHTML = jobsList.map(j=>'<option value="'+j.id+'">'+esc(j.title)+'</option>').join('');
-    $btn.onclick = async () => {
-      $btn.disabled = true; $btn.textContent = 'Generiere...';
-      const gen = await fetchJSON('/api/copilot/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidateId:$cand.value,jobId:$job.value,context:$ctx.value})});
-      $btn.disabled = false; $btn.textContent = 'Nachrichten generieren';
-      if (!gen?.success) { $out.innerHTML = '<div class="card">Fehler: '+(gen?.error||'unbekannt')+'</div>'; return; }
-      const d = gen.data;
-      $llm.innerHTML = d.llm?.used ? '<span class="pill good">LLM: '+esc(d.llm.model||'aktiv')+'</span>' : '<span class="pill warn">LLM: off (Fallback-Templates)</span>';
-      $out.innerHTML = ['direct','advisory','visionary'].map(t=>'<div class="card" style="margin-top:10px"><h3>'+t.toUpperCase()+' <span class="small">~'+Math.round(d.predicted_response_rate[t]*100)+'% Response</span></h3><p style="white-space:pre-wrap">'+esc(d[t])+'</p></div>').join('');
-    };
-  };
-  return { html, afterRender };
-}
-
-async function loadMarket(){
-  const data=await fetchJSON('/api/market/heatmap?role=Software%20Engineer');
-  return `<h2>Marktdaten</h2><div class='small' style='margin-bottom:16px'>Talent-Dichte, Median-Gehaelter und Remote-Readiness pro Region. Hilft bei Gehaltsverhandlungen und Standortentscheidungen.</div><div class='card'><table class='table'><tr><th>Region</th><th>Dichte</th><th>Median</th><th>Remote %</th></tr>${data.data.slice(0,16).map(m=>`<tr><td>${m.region}</td><td>${m.talent_density}</td><td>€${m.median_salary}</td><td>${m.remote_readiness_pct}%</td></tr>`).join('')}</table></div>`;
-}
-
-async function loadAgent(){
-  const run=await fetchJSON('/api/agent/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobSpec:{region:'Berlin'}})});
-  const results=await fetchJSON('/api/agent/results/'+run.data.runId);
-  return `<h2>Kandidatensuche</h2><div class='small' style='margin-bottom:16px'>Der Agent durchsucht den Kandidaten-Pool und erstellt automatisch eine Shortlist basierend auf Job-Anforderungen.</div><div class='card'><table class='table'><tr><th>Name</th><th>Score</th><th>Begründung</th></tr>${results.data.slice(0,5).map(r=>`<tr><td>${r.candidate.name}</td><td>${r.score}</td><td>${r.reason}</td></tr>`).join('')}</table></div>`;
-}
-
-async function loadSilver(){
-  const pool=await fetchJSON('/api/silver-medals');
-  return `<h2>Talent Pool</h2><div class='small' style='margin-bottom:16px'>Kandidaten, die in frueheren Prozessen knapp gescheitert sind ("Silbermedaillen"). Ideal fuer schnelle Nachbesetzungen.</div><div class='card'><table class='table'><tr><th>ID</th><th>Kandidat</th><th>Rang</th></tr>${pool.data.map(s=>`<tr><td>${s.id}</td><td>${s.candidate_id}</td><td>${s.shortlist_position}</td></tr>`).join('')}</table></div>`;
-}
-
-async function loadCompanies(){
-  const score=await fetchJSON('/api/hiring-managers/hm1/score');
-  return `<h2>Unternehmen</h2><div class='small' style='margin-bottom:16px'>Quality Score fuer Hiring Manager: Feedback-Geschwindigkeit, Interview-Konsistenz und Offer-Conversion im Ueberblick.</div><div class='card'><div>Score: ${score.data.score} (${score.data.grade})</div><pre>${JSON.stringify(score.data.breakdown,null,2)}</pre></div>`;
-}
-
-async function loadInterviews(){
-  const analyzed=await fetchJSON('/api/interviews/int1/analyze',{method:'POST'});
-  const comp=await fetchJSON('/api/compensation/pe1/predict');
-  return `<h2>Interviews</h2><div class='small' style='margin-bottom:16px'>Interview-Analyse (Kompetenz-Scores, Sentiment, Red Flags) und Compensation-Fit Prognose fuer aktuelle Kandidaten.</div><div class='grid2'><div class='card'><h3>Interview Analyse</h3><p>${analyzed.data.notes_summary}</p><pre>${JSON.stringify(analyzed.data.competency_scores,null,2)}</pre></div><div class='card'><h3>Compensation</h3><div>Fit: ${comp.data.fit}</div><div>Gap: €${comp.data.gap}</div><ul>${comp.data.negotiation_tips.map(t=>`<li>${t}</li>`).join('')}</ul></div></div>`;
-}
-
-async function loadWorklist(){
-  state.worklist ??= { tenantId: null, userId: '' };
-  if (!state.pilot?.context) state.pilot = { ...(state.pilot||{}), context: await fetchJSON('/api/pilot/context') };
+  await ensurePilotContext();
   const ctx = state.pilot.context.data;
   const tenants = ctx.tenants || [];
-  const users = ctx.users || [];
-  if (!state.worklist.tenantId && tenants.length) state.worklist.tenantId = tenants[0].id;
+  const tId = tenants[0]?.id || '';
 
-  const html = `
-    <h2>Worklist</h2>
-    <div class='small' style='margin-bottom:8px'>Deine priorisierten Aufgaben fuer heute. Klick auf einen Kandidaten oeffnet ihn direkt in der Inbox.</div>
-    <div class='card' style='margin-top:12px'>
-      <div class='grid2'>
-        <div>
-          <div class='small'>Tenant</div>
-          <select id='wlTenant'></select>
-        </div>
-        <div>
-          <div class='small'>Recruiter (optional)</div>
-          <select id='wlUser'></select>
-        </div>
-      </div>
-      <div class='row'><button class='btn primary' id='wlRefresh'>Refresh</button></div>
-    </div>
-    <div id='wlOut' style='margin-top:12px'><div class='card'>Lade...</div></div>
+  const [kpi, wl] = await Promise.all([
+    fetchJSON('/api/dashboard/kpis/r1'),
+    fetchJSON('/api/pilot/worklist?' + qs({ tenantId: tId }))
+  ]);
+
+  const wlData = wl?.data || {};
+  const newApps = wlData.new || [];
+  const needsInfo = wlData.needs_info || [];
+  const waitingHm = wlData.waiting_hm || [];
+  const totalTodo = newApps.length + needsInfo.length + waitingHm.length;
+
+  const kpiCards = [
+    ['Heute offen', totalTodo, totalTodo > 0 ? 'var(--primary)' : 'var(--secondary)'],
+    ['Neue Bewerbungen', newApps.length, null],
+    ['Warten auf Infos', needsInfo.length, null],
+    ['Warten auf HM', waitingHm.length, null],
+  ];
+
+  const appRow = (a) => `
+    <tr class='click' data-goto-app='${esc(a.id)}' style='cursor:pointer'>
+      <td><strong>${esc(a.candidateName)}</strong><div class='small'>${esc(a.jobTitle || '')}</div></td>
+      <td>${badgeScore(a.overall || 0)}</td>
+      <td><span class='pill'>${esc(a.status)}</span></td>
+      <td class='small'>${esc(fmtDate(a.submittedAt))}</td>
+    </tr>
   `;
 
-  const afterRender = () => {
-    const $t = document.getElementById('wlTenant');
-    const $u = document.getElementById('wlUser');
-    const $out = document.getElementById('wlOut');
-    const $r = document.getElementById('wlRefresh');
-
-    const renderSection = (title, items) => `
+  const html = `
+    <h2>Dashboard</h2>
+    <div class='small' style='margin-bottom:16px'>Was heute ansteht.</div>
+    <div class='cards'>
+      ${kpiCards.map(([label, val, color]) => `
+        <div class='card'>
+          <div class='small'>${esc(label)}</div>
+          <div class='big' ${color ? `style='color:${color}'` : ''}>${esc(val)}</div>
+        </div>
+      `).join('')}
+    </div>
+    ${newApps.length ? `
+      <div class='card' style='margin-top:16px'>
+        <h3>Neue Bewerbungen</h3>
+        <div class='small' style='margin-bottom:8px'>Diese Bewerbungen warten auf deine erste Einschaetzung.</div>
+        <table class='table'>
+          <tr><th>Kandidat</th><th>Score</th><th>Status</th><th>Eingegangen</th></tr>
+          ${newApps.slice(0, 10).map(appRow).join('')}
+        </table>
+        ${newApps.length > 10 ? `<div class='small' style='margin-top:8px'>+ ${newApps.length - 10} weitere</div>` : ''}
+      </div>
+    ` : `<div class='card' style='margin-top:16px'><div class='small'>Keine neuen Bewerbungen. Alles aufgearbeitet.</div></div>`}
+    ${needsInfo.length ? `
       <div class='card' style='margin-top:12px'>
-        <div class='row' style='justify-content:space-between;align-items:center'>
-          <h3 style='margin:0'>${esc(title)}</h3>
-          <span class='pill'>${esc(items.length)}</span>
-        </div>
-        ${items.length ? `
-          <table class='table' style='margin-top:8px'>
-            <tr><th>Kandidat</th><th>Job</th><th>Overall</th><th>Evidence</th><th>TemplateRisk</th></tr>
-            ${items.map(a=>`
-              <tr class='click' data-app='${esc(a.id)}'>
-                <td><strong>${esc(a.candidateName)}</strong><div class='small'>${esc(fmtDate(a.submittedAt))} · ${esc(a.status)}</div></td>
-                <td class='small'>${esc(a.jobTitle)}</td>
-                <td>${badgeScore(a.overall || 0)}</td>
-                <td>${badgeScore(a.evidence || 0)}</td>
-                <td>${badgeScore(a.templateRisk || 0, false)}</td>
-              </tr>
-            `).join('')}
-          </table>
-        ` : `<div class='small' style='margin-top:8px'>Keine Items.</div>`}
+        <h3>Warten auf Infos</h3>
+        <div class='small' style='margin-bottom:8px'>Du hast Rueckfragen gestellt - diese Kandidaten haben noch nicht geantwortet.</div>
+        <table class='table'>
+          <tr><th>Kandidat</th><th>Score</th><th>Status</th><th>Eingegangen</th></tr>
+          ${needsInfo.slice(0, 5).map(appRow).join('')}
+        </table>
       </div>
-    `;
-
-    const load = async () => {
-      $out.innerHTML = `<div class='card'>Lade...</div>`;
-      const res = await fetchJSON('/api/pilot/worklist?' + qs({ tenantId: $t.value, userId: $u.value || undefined }));
-      if (!res?.success) return $out.innerHTML = `<div class='card'>Fehler: ${esc(res?.error || 'unbekannt')}</div>`;
-      const d = res.data;
-      $out.innerHTML =
-        renderSection('New', d.new || []) +
-        renderSection('Needs Info', d.needs_info || []) +
-        renderSection('Waiting HM', d.waiting_hm || []) +
-        renderSection('Assessment Due', d.assessment_due || []);
-
-      $out.querySelectorAll('[data-app]').forEach((tr) => {
-        tr.onclick = () => {
-          const id = tr.dataset.app;
-          history.pushState({}, '', '/inbox?appId=' + encodeURIComponent(id));
-          current = 'inbox';
-          render();
-        };
-      });
-    };
-
-    $t.innerHTML = tenants.map(t=>`<option value='${esc(t.id)}' ${t.id===state.worklist.tenantId?'selected':''}>${esc(t.name)}</option>`).join('');
-    const tUsers = users.filter(u=>u.tenantId===$t.value && u.role==='recruiter');
-    $u.innerHTML = [`<option value=''>Alle</option>`, ...tUsers.map(u=>`<option value='${esc(u.id)}'>${esc(u.name)}</option>`)].join('');
-    $u.value = state.worklist.userId || '';
-
-    $t.onchange = () => {
-      state.worklist.tenantId = $t.value;
-      const tu = users.filter(u=>u.tenantId===$t.value && u.role==='recruiter');
-      $u.innerHTML = [`<option value=''>Alle</option>`, ...tu.map(u=>`<option value='${esc(u.id)}'>${esc(u.name)}</option>`)].join('');
-      $u.value = '';
-      load();
-    };
-    $u.onchange = () => { state.worklist.userId = $u.value; load(); };
-    $r.onclick = load;
-
-    load();
-  };
-
-  return { html, afterRender };
-}
-
-async function loadTemplates(){
-  state.templates ??= { tenantId: null, selectedId: null };
-  if (!state.pilot?.context) state.pilot = { ...(state.pilot||{}), context: await fetchJSON('/api/pilot/context') };
-  const ctx = state.pilot.context.data;
-  const tenants = ctx.tenants || [];
-  if (!state.templates.tenantId && tenants.length) state.templates.tenantId = tenants[0].id;
-
-  const html = `
-    <h2>Vorlagen</h2>
-    <div class='small' style='margin-bottom:8px'>E-Mail-, SMS- und LinkedIn-Templates. Verwende Variablen wie <span class='mono'>{{candidateName}}</span>, <span class='mono'>{{jobTitle}}</span> und <span class='mono'>{{senderName}}</span>, um Nachrichten automatisch zu personalisieren.</div>
-    <div class='card' style='margin-top:12px'>
-      <div class='grid2'>
-        <div>
-          <div class='small'>Tenant</div>
-          <select id='tplTenant'></select>
-        </div>
-        <div>
-          <div class='small'>Template</div>
-          <select id='tplSelect'></select>
-        </div>
+    ` : ''}
+    ${waitingHm.length ? `
+      <div class='card' style='margin-top:12px'>
+        <h3>Warten auf Hiring Manager</h3>
+        <div class='small' style='margin-bottom:8px'>Diese Kandidaten sind beim HM - du wartest auf Feedback.</div>
+        <table class='table'>
+          <tr><th>Kandidat</th><th>Score</th><th>Status</th><th>Eingegangen</th></tr>
+          ${waitingHm.slice(0, 5).map(appRow).join('')}
+        </table>
       </div>
-      <div class='row'>
-        <button class='btn' id='tplNew'>New</button>
-        <button class='btn primary' id='tplSave'>Save</button>
-        <button class='btn' id='tplRefresh'>Refresh</button>
-      </div>
-    </div>
-    <div class='grid2' style='margin-top:12px'>
-      <div class='card'>
-        <div class='small'>Name</div>
-        <input id='tplName'/>
-        <div class='small' style='margin-top:10px'>Channel</div>
-        <select id='tplChannel'>
-          <option value='email'>email</option>
-          <option value='sms'>sms</option>
-          <option value='linkedin'>linkedin</option>
-        </select>
-        <div class='small' style='margin-top:10px'>Subject</div>
-        <input id='tplSubject'/>
-        <div class='small' style='margin-top:10px'>Body</div>
-        <textarea id='tplBody' rows='10'></textarea>
-      </div>
-      <div class='card'>
-        <h3>Preview</h3>
-        <div class='small'>Beispielvariablen</div>
-        <pre class='mono' id='tplVars'>{"candidateName":"Emma Richter","jobTitle":"Fullstack Engineer","senderName":"Leonie Weber","question":"Kannst du das kurz belegen?"}</pre>
-        <div class='row'><button class='btn' id='tplPreviewBtn'>Render</button></div>
-        <div class='card' style='margin-top:12px'>
-          <div class='small'>Subject</div>
-          <div id='tplPreviewSubject' class='mono'></div>
-          <div class='small' style='margin-top:10px'>Body</div>
-          <pre id='tplPreviewBody' class='mono'></pre>
-        </div>
-      </div>
-    </div>
+    ` : ''}
   `;
 
   const afterRender = () => {
-    const $tenant = document.getElementById('tplTenant');
-    const $sel = document.getElementById('tplSelect');
-    const $name = document.getElementById('tplName');
-    const $channel = document.getElementById('tplChannel');
-    const $subject = document.getElementById('tplSubject');
-    const $body = document.getElementById('tplBody');
-    const $new = document.getElementById('tplNew');
-    const $save = document.getElementById('tplSave');
-    const $refresh = document.getElementById('tplRefresh');
-    const $vars = document.getElementById('tplVars');
-    const $prevBtn = document.getElementById('tplPreviewBtn');
-    const $pSub = document.getElementById('tplPreviewSubject');
-    const $pBody = document.getElementById('tplPreviewBody');
-
-    let templates = [];
-
-    const fill = () => {
-      $tenant.innerHTML = tenants.map(t=>`<option value='${esc(t.id)}' ${t.id===state.templates.tenantId?'selected':''}>${esc(t.name)}</option>`).join('');
-    };
-
-    const selectTemplate = (id) => {
-      const t = templates.find(x=>x.id===id) || null;
-      state.templates.selectedId = t?.id || null;
-      $name.value = t?.name || '';
-      $channel.value = t?.channel || 'email';
-      $subject.value = t?.subject || '';
-      $body.value = t?.body || '';
-    };
-
-    const load = async () => {
-      const res = await fetchJSON('/api/pilot/templates?' + qs({ tenantId: $tenant.value }));
-      templates = res?.success ? res.data : [];
-      if (!templates.length) {
-        $sel.innerHTML = `<option value=''>No templates</option>`;
-        selectTemplate(null);
-        return;
-      }
-      if (!state.templates.selectedId || !templates.some(t=>t.id===state.templates.selectedId)) state.templates.selectedId = templates[0].id;
-      $sel.innerHTML = templates.map(t=>`<option value='${esc(t.id)}' ${t.id===state.templates.selectedId?'selected':''}>${esc(t.name)}</option>`).join('');
-      selectTemplate(state.templates.selectedId);
-    };
-
-    const renderPreview = () => {
-      let vars = {};
-      try { vars = JSON.parse($vars.textContent || '{}'); } catch {}
-      const sub = $subject.value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_,k)=>vars[k] ?? '');
-      const bod = $body.value.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_,k)=>vars[k] ?? '');
-      $pSub.textContent = sub;
-      $pBody.textContent = bod;
-    };
-
-    fill();
-    load();
-    $tenant.onchange = async () => { state.templates.tenantId = $tenant.value; state.templates.selectedId = null; await load(); };
-    $sel.onchange = () => selectTemplate($sel.value);
-    $refresh.onclick = load;
-    $prevBtn.onclick = renderPreview;
-
-    $new.onclick = async () => {
-      const res = await fetchJSON('/api/pilot/templates', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId:$tenant.value,name:'New Template',channel:'email',subject:'',body:''})});
-      if (!res?.success) return alert(res?.error || 'Fehler');
-      state.templates.selectedId = res.data.id;
-      await load();
-    };
-
-    $save.onclick = async () => {
-      const id = state.templates.selectedId;
-      if (!id) return;
-      const res = await fetchJSON('/api/pilot/templates/' + id, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId:$tenant.value,name:$name.value,channel:$channel.value,subject:$subject.value,body:$body.value})});
-      if (!res?.success) return alert(res?.error || 'Fehler');
-      await load();
-      renderPreview();
-    };
+    document.querySelectorAll('[data-goto-app]').forEach(tr => {
+      tr.onclick = () => {
+        const id = tr.dataset.gotoApp;
+        history.pushState({}, '', '/inbox?appId=' + encodeURIComponent(id));
+        current = 'inbox';
+        render();
+      };
+    });
   };
 
   return { html, afterRender };
 }
+
+
+
+async function loadNachrichten(){
+  await ensurePilotContext();
+  const ctx = state.pilot.context.data;
+  const tenants = ctx.tenants || [];
+  state.nachrichten ??= { tab: 'copilot', tenantId: tenants[0]?.id || '', selectedTplId: null };
+
+  const html = `
+    <h2>Nachrichten</h2>
+    <div class='small' style='margin-bottom:16px'>Schreibe Kandidaten an: Per KI generiert oder mit gespeicherten Vorlagen.</div>
+    <div class='row' style='margin-bottom:16px'>
+      <button class='btn ${state.nachrichten.tab==='copilot'?'primary':''}' data-tab='copilot'>KI-Copilot</button>
+      <button class='btn ${state.nachrichten.tab==='templates'?'primary':''}' data-tab='templates'>Vorlagen</button>
+    </div>
+    <div id='nachrichtenContent'></div>
+  `;
+
+  const afterRender = () => {
+    const $content = document.getElementById('nachrichtenContent');
+
+    const renderCopilot = () => {
+      const cands = Array.from({length:10},(_,i)=>({id:'cand'+(i+1),name:['Luca Fischer','Emma Richter','Noah Hofmann','Mia Becker','Paul Wagner','Lina Schulz','Elias Neumann','Hannah Wolf','Felix Klein','Clara Schreiber'][i]}));
+      const jobsList = Array.from({length:5},(_,i)=>({id:'job'+(i+1),title:['Software Engineer','Product Manager','Data Scientist','Sales Manager','DevOps Engineer'][i]}));
+      $content.innerHTML = `
+        <div class='card'>
+          <div class='small' style='margin-bottom:12px'>Waehle Kandidat und Job, dann generiert die KI drei verschiedene Nachrichten (direkt, beratend, visionaer). Ohne LLM kommen Fallback-Templates.</div>
+          <div class='grid3'>
+            <div><div class='small'>Kandidat</div><select id='cpCand'>${cands.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('')}</select></div>
+            <div><div class='small'>Job</div><select id='cpJob'>${jobsList.map(j=>'<option value="'+j.id+'">'+esc(j.title)+'</option>').join('')}</select></div>
+            <div><div class='small'>Kontext (optional)</div><input id='cpCtx' placeholder='z.B. Referral von Max'/></div>
+          </div>
+          <div class='row'><button class='btn primary' id='cpGen'>Nachrichten generieren</button><span class='small' id='cpLLM'></span></div>
+        </div>
+        <div id='cpOut' style='margin-top:12px'></div>
+      `;
+      document.getElementById('cpGen').onclick = async () => {
+        const btn = document.getElementById('cpGen');
+        btn.disabled = true; btn.textContent = 'Generiere...';
+        const gen = await fetchJSON('/api/copilot/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidateId:document.getElementById('cpCand').value,jobId:document.getElementById('cpJob').value,context:document.getElementById('cpCtx').value})});
+        btn.disabled = false; btn.textContent = 'Nachrichten generieren';
+        const $out = document.getElementById('cpOut');
+        if (!gen?.success) { $out.innerHTML = '<div class="card">Fehler: '+(gen?.error||'unbekannt')+'</div>'; return; }
+        const d = gen.data;
+        document.getElementById('cpLLM').innerHTML = d.llm?.used ? '<span class="pill good">LLM: '+esc(d.llm.model||'aktiv')+'</span>' : '<span class="pill warn">LLM: off (Fallback)</span>';
+        $out.innerHTML = [
+          ['direct','Direkt'],['advisory','Beratend'],['visionary','Visionaer']
+        ].map(([t,label])=>`<div class='card' style='margin-top:10px'><div class='row' style='justify-content:space-between;align-items:center;margin-top:0'><h3>${label}</h3><span class='small'>~${Math.round(d.predicted_response_rate[t]*100)}% Response</span></div><p style='white-space:pre-wrap'>${esc(d[t])}</p></div>`).join('');
+      };
+    };
+
+    const renderTemplates = () => {
+      const tId = state.nachrichten.tenantId;
+      $content.innerHTML = `
+        <div class='card'>
+          <div class='small' style='margin-bottom:12px'>Vorlagen fuer E-Mail, SMS und LinkedIn. Verwende <span class='mono'>{{candidateName}}</span>, <span class='mono'>{{jobTitle}}</span> als Platzhalter.</div>
+          <div class='grid2'>
+            <div><div class='small'>Tenant</div><select id='tplT'>${tenants.map(t=>`<option value='${esc(t.id)}' ${t.id===tId?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+            <div><div class='small'>Vorlage</div><select id='tplSel'></select></div>
+          </div>
+          <div class='row'><button class='btn' id='tplNew'>Neue Vorlage</button><button class='btn primary' id='tplSave'>Speichern</button></div>
+        </div>
+        <div class='card' style='margin-top:12px'>
+          <div class='grid2'>
+            <div>
+              <div class='small'>Name</div><input id='tplName'/>
+              <div class='small' style='margin-top:10px'>Kanal</div>
+              <select id='tplCh'><option value='email'>E-Mail</option><option value='sms'>SMS</option><option value='linkedin'>LinkedIn</option></select>
+              <div class='small' style='margin-top:10px'>Betreff</div><input id='tplSub'/>
+              <div class='small' style='margin-top:10px'>Text</div><textarea id='tplBod' rows='8'></textarea>
+            </div>
+            <div>
+              <div class='small'>Vorschau</div>
+              <div class='card' style='margin-top:8px'>
+                <div class='small'>Betreff</div><div id='tplPSub' class='mono'></div>
+                <div class='small' style='margin-top:8px'>Text</div><pre id='tplPBod' class='mono'></pre>
+              </div>
+              <div class='row'><button class='btn' id='tplPrev'>Vorschau aktualisieren</button></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      let templates = [];
+      const vars = {candidateName:'Emma Richter',jobTitle:'Fullstack Engineer',senderName:'Leonie Weber'};
+      const load = async () => {
+        const res = await fetchJSON('/api/pilot/templates?' + qs({ tenantId: document.getElementById('tplT').value }));
+        templates = res?.success ? res.data : [];
+        const $sel = document.getElementById('tplSel');
+        if (!templates.length) { $sel.innerHTML = '<option>Keine Vorlagen</option>'; return; }
+        if (!state.nachrichten.selectedTplId || !templates.some(t=>t.id===state.nachrichten.selectedTplId)) state.nachrichten.selectedTplId = templates[0].id;
+        $sel.innerHTML = templates.map(t=>`<option value='${esc(t.id)}' ${t.id===state.nachrichten.selectedTplId?'selected':''}>${esc(t.name)}</option>`).join('');
+        select(state.nachrichten.selectedTplId);
+      };
+      const select = (id) => {
+        const t = templates.find(x=>x.id===id);
+        state.nachrichten.selectedTplId = id;
+        document.getElementById('tplName').value = t?.name || '';
+        document.getElementById('tplCh').value = t?.channel || 'email';
+        document.getElementById('tplSub').value = t?.subject || '';
+        document.getElementById('tplBod').value = t?.body || '';
+      };
+      const preview = () => {
+        const r = (s) => s.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_,k)=>vars[k]??'');
+        document.getElementById('tplPSub').textContent = r(document.getElementById('tplSub').value);
+        document.getElementById('tplPBod').textContent = r(document.getElementById('tplBod').value);
+      };
+      load();
+      document.getElementById('tplT').onchange = () => { state.nachrichten.tenantId = document.getElementById('tplT').value; state.nachrichten.selectedTplId = null; load(); };
+      document.getElementById('tplSel').onchange = () => select(document.getElementById('tplSel').value);
+      document.getElementById('tplPrev').onclick = preview;
+      document.getElementById('tplNew').onclick = async () => {
+        const res = await fetchJSON('/api/pilot/templates', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId:document.getElementById('tplT').value,name:'Neue Vorlage',channel:'email',subject:'',body:''})});
+        if (res?.success) { state.nachrichten.selectedTplId = res.data.id; await load(); }
+      };
+      document.getElementById('tplSave').onclick = async () => {
+        const id = state.nachrichten.selectedTplId;
+        if (!id) return;
+        await fetchJSON('/api/pilot/templates/' + id, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId:document.getElementById('tplT').value,name:document.getElementById('tplName').value,channel:document.getElementById('tplCh').value,subject:document.getElementById('tplSub').value,body:document.getElementById('tplBod').value})});
+        await load(); preview();
+      };
+    };
+
+    const showTab = (tab) => {
+      state.nachrichten.tab = tab;
+      document.querySelectorAll('[data-tab]').forEach(b => {
+        b.classList.toggle('primary', b.dataset.tab === tab);
+      });
+      if (tab === 'copilot') renderCopilot();
+      else renderTemplates();
+    };
+
+    document.querySelectorAll('[data-tab]').forEach(b => {
+      b.onclick = () => showTab(b.dataset.tab);
+    });
+
+    showTab(state.nachrichten.tab);
+  };
+
+  return { html, afterRender };
+}
+
+
+
 
 async function loadSequences(){
   state.sequences ??= { tenantId: null, selectedId: null };
@@ -1923,8 +1841,8 @@ async function render(){
     return;
   }
   const sidebarSections = sections.map(s => `
-    <div style='margin-top:16px'>
-      <div style='padding:4px 14px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-tertiary)'>${esc(s.label)}</div>
+    <div style='margin-top:${s.label ? '20' : '8'}px'>
+      ${s.label ? `<div style='padding:4px 14px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-tertiary);margin-bottom:2px'>${esc(s.label)}</div>` : ''}
       ${s.items.map(([id, label]) => `<button data-route='${id}'>${esc(label)}</button>`).join('')}
     </div>
   `).join('');
@@ -2006,22 +1924,14 @@ async function render(){
   const views={
     home:loadHome,
     dashboard:loadDashboard,
-    pipeline:loadPipeline,
-    worklist:loadWorklist,
     inbox:loadInbox,
-    sequences:loadSequences,
-    templates:loadTemplates,
-    integrations:loadIntegrations,
-    analytics:loadAnalytics,
+    nachrichten:loadNachrichten,
     hm:loadHm,
+    analytics:loadAnalytics,
+    sequences:loadSequences,
+    integrations:loadIntegrations,
     assessment:loadAssessment,
     triage:loadTriage,
-    copilot:loadCopilot,
-    market:loadMarket,
-    agent:loadAgent,
-    'talent-pool':loadSilver,
-    companies:loadCompanies,
-    interviews:loadInterviews
   };
   const view = await views[current]();
   const html = typeof view === 'string' ? view : view?.html || '';
