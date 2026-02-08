@@ -1648,6 +1648,43 @@ async function loadInbox(){
           const templates = (ctx.templates || []).filter((t) => t.tenantId === tenantId);
           const needsTpl = templates.find((t) => String(t.name).toLowerCase().includes('needs info')) || templates[0] || null;
 
+          const buildNeedsInfoQuestion = ({ application, job } = {}) => {
+            const analysis = application?.analysis || {};
+            const flags = Array.isArray(analysis.flags) ? analysis.flags : [];
+            const ep = analysis.evidencePack || {};
+            const weakest = Array.isArray(ep.weakest) ? ep.weakest : [];
+            const strongest = Array.isArray(ep.strongest) ? ep.strongest : [];
+
+            const lines = [];
+            // Always ask for evidence links + ownership.
+            lines.push('Koennen Sie bitte 1-2 Links (Repo/Portfolio/Case Study) senden, die Ihre Arbeit belegen?');
+
+            // Evidence-gap driven follow-ups (keep it short).
+            if (weakest.length) {
+              const c = weakest[0];
+              const claim = String(c?.claim || '').trim();
+              if (claim) lines.push(`Zu "${claim}": Welche Metrik/Artefakte koennen Sie konkret nennen (z.B. KPI, Screenshot, Ticket, Demo-Link)?`);
+            } else if (strongest.length) {
+              const c = strongest[0];
+              const claim = String(c?.claim || '').trim();
+              if (claim) lines.push(`Zu "${claim}": Was war Ihr Anteil, und wie wurde der Effekt gemessen?`);
+            }
+
+            // Flags: targeted requests (Siezen).
+            const has = (t) => flags.some((f) => f && String(f.type) === t);
+            if (has('portfolio_no_link')) lines.push('Sie erwaehnen ein Portfolio, aber ohne Link: Bitte senden Sie den Link (oder 1-2 Beispiele).');
+            if (has('buzzwords_no_evidence')) lines.push('Bitte nennen Sie 2 konkrete Projekte, in denen Sie die genannten Technologien eingesetzt haben (Ihr Anteil + Ergebnis).');
+            if (has('years_suspicious')) lines.push('Koennen Sie Ihre Zeitlinie kurz auflisten (Jahr/Arbeitgeber/Rolle), damit wir das sauber matchen koennen?');
+
+            // Job-family specific proof point
+            if (job?.family === 'software') lines.push('Optional: Koennen Sie einen kurzen Code-Ausschnitt oder ein PR/Commit verlinken, das Sie verantwortet haben?');
+            if (job?.family === 'sales') lines.push('Optional: Koennen Sie 1-2 konkrete Deals/Targets (Groessenordnung) und Ihren Beitrag dazu kurz beschreiben?');
+            if (job?.family === 'pm') lines.push('Optional: Koennen Sie 1 Beispiel fuer ein Feature nennen (Ziel/Metrik/Experiment), das Sie end-to-end verantwortet haben?');
+
+            // Keep to a small number of lines.
+            return lines.slice(0, 5).join('\\n');
+          };
+
           if (kind === 'reject') {
             await fetchJSON(`/api/pilot/applications/${id}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId, status:'rejected'})});
           } else if (kind === 'shortlist') {
@@ -1658,11 +1695,15 @@ async function loadInbox(){
             if (!res?.success) alert(res?.error || 'Fehler');
           } else if (kind === 'needs') {
             if (!needsTpl) return alert('Kein Template gefunden');
+            const detail = await fetchJSON(`/api/pilot/applications/${id}?tenantId=${encodeURIComponent(tenantId)}`);
+            const app = detail?.data?.application || null;
+            const job = app ? (ctx.jobs || []).find((j) => j.id === app.jobId) : null;
+            const question = buildNeedsInfoQuestion({ application: app, job });
             const payload = {
               tenantId,
               applicationId: id,
               templateId: needsTpl.id,
-              variables: { question: 'Bitte senden Sie 1-2 Links (Repo/Portfolio/Case Study) und 2 konkrete Beispiele mit Metriken, die Ihren Impact belegen.' },
+              variables: { question },
               setStatus: 'needs_info'
             };
             const res = await fetchJSON('/api/pilot/messages/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
