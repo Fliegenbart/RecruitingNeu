@@ -304,6 +304,131 @@ h1{
   max-width: 70ch;
 }
 
+/* Process ("So funktioniert's") */
+.process{
+  position: relative;
+  overflow: hidden;
+  margin-top: 28px;
+  padding: 22px;
+}
+.processBg{
+  position: absolute;
+  inset: -30px;
+  background:
+    radial-gradient(900px 420px at 18% 18%, rgba(31,215,176,.16), transparent 62%),
+    radial-gradient(900px 420px at 78% 22%, rgba(63,124,255,.14), transparent 62%),
+    radial-gradient(800px 520px at 55% 92%, rgba(255,176,32,.09), transparent 64%);
+  opacity: .7;
+  pointer-events: none;
+}
+.processGrid{
+  position: relative;
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 18px;
+  align-items: start;
+}
+.processIntro h2{
+  margin: 12px 0 10px;
+  font-size: 22px;
+  letter-spacing: -.35px;
+}
+.processIntro p{
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+  max-width: 70ch;
+}
+.processMiniStats{
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.processMiniStat{
+  border: 1px solid rgba(230,232,245,.92);
+  background: rgba(255,255,255,.78);
+  border-radius: 16px;
+  padding: 12px 12px;
+}
+.processMiniTop{
+  font-weight: 950;
+  letter-spacing: -.1px;
+}
+.processMiniSub{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.processSteps{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.processSteps::before{
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(31,215,176,.35), rgba(63,124,255,.28));
+  border-radius: 99px;
+}
+.processStep{
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid rgba(230,232,245,.92);
+  background: rgba(255,255,255,.86);
+  border-radius: 18px;
+  padding: 14px;
+}
+.processBadge{
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  border: 1px solid rgba(11,16,32,.12);
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 10px 24px rgba(8,12,24,.08);
+  z-index: 1;
+}
+.processStep.s1 .processBadge{ border-color: rgba(31,215,176,.35); }
+.processStep.s2 .processBadge{ border-color: rgba(63,124,255,.35); }
+.processStep.s3 .processBadge{ border-color: rgba(255,176,32,.35); }
+
+.processContent h3{
+  margin: 2px 0 6px;
+  font-size: 15px;
+  letter-spacing: -.1px;
+}
+.processContent p{
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.processContent ul{
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: rgba(11,16,32,.70);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.processContent li{ margin: 6px 0; }
+
 .sub{color:var(--muted);font-size:16px;line-height:1.55;max-width:64ch}
 
 .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
@@ -393,6 +518,9 @@ input:focus, textarea:focus, select:focus{border-color: rgba(31,215,176,.42); bo
   .steps{grid-template-columns: 1fr}
   .stats{grid-template-columns: 1fr}
   .logoTrack{animation-duration: 20s}
+  .process{padding: 16px}
+  .processGrid{grid-template-columns: 1fr}
+  .processSteps::before{left: 18px}
 }
 .shotFrame{
   position:relative;
