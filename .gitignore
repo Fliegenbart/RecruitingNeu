@@ -2,3 +2,4 @@
 
 # Local prototype persistence (optional)
 data/db.json
+.vercel
