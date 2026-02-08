@@ -87,8 +87,41 @@ async function loadPipeline(){
 }
 
 async function loadCopilot(){
-  const gen = await fetchJSON('/api/copilot/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidateId:'cand1',jobId:'job1'})});
-  return `<h2>Next-Best-Message Copilot</h2><div class='grid2'>${['direct','advisory','visionary'].map(t=>`<div class='card'><h3>${t.toUpperCase()} <span class='small'>${Math.round(gen.data.predicted_response_rate[t]*100)}%</span></h3><p>${gen.data[t]}</p></div>`).join('')}</div>`;
+  const html = `
+    <h2>Next-Best-Message Copilot</h2>
+    <div class='small'>Generiert personalisierte Nachrichten in 3 Tonalitäten via lokalem LLM.</div>
+    <div class='card' style='margin-top:12px'>
+      <div class='grid3'>
+        <div><div class='small'>Kandidat</div><select id='copilotCand'></select></div>
+        <div><div class='small'>Job</div><select id='copilotJob'></select></div>
+        <div><div class='small'>Kontext (optional)</div><input id='copilotCtx' placeholder='z.B. Referral von Max'/></div>
+      </div>
+      <div class='row'><button class='btn primary' id='copilotGenBtn'>Nachrichten generieren</button><span class='small' id='copilotLLM'></span></div>
+    </div>
+    <div id='copilotOut' style='margin-top:12px'><div class='card'><div class='small'>Klicke "Generieren" um 3 Nachrichten zu erzeugen.</div></div></div>
+  `;
+  const afterRender = () => {
+    const $cand = document.getElementById('copilotCand');
+    const $job = document.getElementById('copilotJob');
+    const $ctx = document.getElementById('copilotCtx');
+    const $out = document.getElementById('copilotOut');
+    const $llm = document.getElementById('copilotLLM');
+    const $btn = document.getElementById('copilotGenBtn');
+    const cands = Array.from({length:10},(_,i)=>({id:'cand'+(i+1),name:['Luca Fischer','Emma Richter','Noah Hofmann','Mia Becker','Paul Wagner','Lina Schulz','Elias Neumann','Hannah Wolf','Felix Klein','Clara Schreiber'][i]}));
+    const jobsList = Array.from({length:5},(_,i)=>({id:'job'+(i+1),title:['Software Engineer','Product Manager','Data Scientist','Sales Manager','DevOps Engineer'][i]}));
+    $cand.innerHTML = cands.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
+    $job.innerHTML = jobsList.map(j=>'<option value="'+j.id+'">'+esc(j.title)+'</option>').join('');
+    $btn.onclick = async () => {
+      $btn.disabled = true; $btn.textContent = 'Generiere...';
+      const gen = await fetchJSON('/api/copilot/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidateId:$cand.value,jobId:$job.value,context:$ctx.value})});
+      $btn.disabled = false; $btn.textContent = 'Nachrichten generieren';
+      if (!gen?.success) { $out.innerHTML = '<div class="card">Fehler: '+(gen?.error||'unbekannt')+'</div>'; return; }
+      const d = gen.data;
+      $llm.innerHTML = d.llm?.used ? '<span class="pill good">LLM: '+esc(d.llm.model||'aktiv')+'</span>' : '<span class="pill warn">LLM: off (Fallback-Templates)</span>';
+      $out.innerHTML = ['direct','advisory','visionary'].map(t=>'<div class="card" style="margin-top:10px"><h3>'+t.toUpperCase()+' <span class="small">~'+Math.round(d.predicted_response_rate[t]*100)+'% Response</span></h3><p style="white-space:pre-wrap">'+esc(d[t])+'</p></div>').join('');
+    };
+  };
+  return { html, afterRender };
 }
 
 async function loadMarket(){
@@ -611,6 +644,37 @@ async function loadAssessment(){
       const res = await fetchJSON('/api/public/assessment/' + encodeURIComponent(token) + '/submit', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers})});
       if (!res?.success) { $m.textContent = 'Fehler: ' + (res?.error || 'unbekannt'); return; }
       $m.textContent = 'Submitted: ' + (res.data.submittedAt || '');
+
+      // Show auto-scoring results if available
+      const scoring = res.data.scoring;
+      if (scoring && scoring.used) {
+        const scoreColor = scoring.percentage >= 70 ? 'var(--secondary, #30d158)' : scoring.percentage >= 40 ? 'var(--warning, #ff9f0a)' : 'var(--danger, #ff453a)';
+        const resultsHtml = `
+          <div class='card' style='margin-top:16px; border-left: 3px solid ${scoreColor}'>
+            <div style='display:flex; align-items:center; gap:12px; margin-bottom:12px'>
+              <div style='font-size:2em; font-weight:700; color:${scoreColor}'>${scoring.percentage}%</div>
+              <div>
+                <div><strong>KI-Bewertung</strong></div>
+                <div class='small'>${esc(scoring.totalScore)}/${esc(scoring.maxTotal)} Punkte · ${esc(scoring.recommendation || '')}</div>
+              </div>
+            </div>
+            ${(scoring.taskResults || []).map((tr, i) => `
+              <div style='padding:10px 0; border-top:1px solid rgba(128,128,128,0.2)'>
+                <div style='display:flex; justify-content:space-between; align-items:center'>
+                  <strong>${esc(tr.task || ('Task ' + (i+1)))}</strong>
+                  <span style='font-weight:600; color:${tr.score >= 7 ? 'var(--secondary, #30d158)' : tr.score >= 4 ? 'var(--warning, #ff9f0a)' : 'var(--danger, #ff453a)'}'>${tr.score}/10</span>
+                </div>
+                <div class='small' style='margin-top:4px'>${esc(tr.feedback || '')}</div>
+                ${tr.strengths?.length ? `<div style='margin-top:6px'>${tr.strengths.map(s => `<span class='pill' style='background:rgba(48,209,88,0.15); color:#30d158'>${esc(s)}</span>`).join(' ')}</div>` : ''}
+                ${tr.gaps?.length ? `<div style='margin-top:4px'>${tr.gaps.map(g => `<span class='pill' style='background:rgba(255,69,58,0.15); color:#ff453a'>${esc(g)}</span>`).join(' ')}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+        document.getElementById('asmtSubmit').parentElement.insertAdjacentHTML('afterend', resultsHtml);
+        document.getElementById('asmtSubmit').disabled = true;
+        document.getElementById('asmtSubmit').textContent = 'Bewertet';
+      }
     };
   };
   return { html, afterRender };
@@ -1644,8 +1708,20 @@ async function loadTriage(){
           ? `<span class='pill warn'>LLM: ${esc(a.llm.reason)}</span>`
           : `<span class='pill'>LLM: off</span>`;
 
-      const llmSummary = a.llm?.used && a.llm?.summary
-        ? `<div class='card' style='margin-top:12px'><h3>LLM Summary</h3><div>${esc(a.llm.summary)}</div></div>`
+      const summaryCard = a.summary
+        ? `<div class='card' style='margin-top:12px;border-color:rgba(10,132,255,0.3)'><h3>KI-Zusammenfassung</h3><div style='white-space:pre-wrap'>${esc(a.summary)}</div></div>`
+        : a.llm?.summary
+          ? `<div class='card' style='margin-top:12px;border-color:rgba(10,132,255,0.3)'><h3>KI-Zusammenfassung</h3><div style='white-space:pre-wrap'>${esc(a.llm.summary)}</div></div>`
+          : '';
+
+      const semanticCard = a.semanticSkills
+        ? `<div class='card' style='margin-top:12px'>
+            <h3>Semantisches Skill-Matching (LLM)</h3>
+            ${a.llm?.scoreBoost ? `<div class='small' style='margin-bottom:8px'>Score-Boost: +${a.llm.scoreBoost} (implizite Skills erkannt)</div>` : ''}
+            ${(a.semanticSkills.matchedSkills||[]).length ? `<div class='row'>${a.semanticSkills.matchedSkills.map(s=>`<span class='pill good'>${esc(s.skill)} (${Math.round((s.confidence||0)*100)}%)</span>`).join('')}</div>` : ''}
+            ${(a.semanticSkills.implicitSkills||[]).length ? `<div style='margin-top:8px'><div class='small'>Implizit erkannt:</div><div class='row'>${a.semanticSkills.implicitSkills.map(s=>`<span class='pill warn'>${esc(s.skill)}: ${esc(s.evidence||'')}</span>`).join('')}</div></div>` : ''}
+            ${(a.semanticSkills.missingSkills||[]).length ? `<div style='margin-top:8px'><div class='small'>Nicht gefunden:</div><div class='row'>${a.semanticSkills.missingSkills.map(s=>`<span class='pill bad'>${esc(s)}</span>`).join('')}</div></div>` : ''}
+          </div>`
         : '';
 
       const scoreRow = `
@@ -1655,7 +1731,9 @@ async function loadTriage(){
           <div class='card'><div class='small'>Evidence</div><div class='big'>${badgeScore(a.scores.evidence)}</div></div>
         </div>
         <div class='card' style='margin-top:12px'><div class='small'>Template-Risiko (niedrig ist gut)</div><div class='big'>${badgeScore(a.scores.templateRisk, false)}</div></div>
-        <div class='card' style='margin-top:12px'><h3>LLM (optional)</h3><div class='row'>${llmPill}</div><div class='small'>Hinweis: LLM ist nur Enrichment. Gate/Score funktionieren ohne LLM.</div></div>
+        ${summaryCard}
+        ${semanticCard}
+        <div class='card' style='margin-top:12px'><h3>LLM</h3><div class='row'>${llmPill}</div><div class='small'>LLM aktiviert semantisches Matching, Zusammenfassung und Score-Boost. Heuristik funktioniert auch ohne.</div></div>
       `;
 
       const mustHaveCard = `

@@ -689,72 +689,61 @@ export const analyzeApplication = ({ jobFamily, applicationText, rubric } = {}) 
   };
 };
 
-const tryParseJSON = (s) => {
-  if (!s) return null;
-  try {
-    return JSON.parse(s);
-  } catch {
-    return null;
-  }
-};
-
-const ollamaGenerate = async ({ host, model, prompt }) => {
-  const res = await fetch(`${host}/api/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, prompt, stream: false })
-  });
-  if (!res.ok) throw new Error(`ollama_http_${res.status}`);
-  const data = await res.json();
-  return data?.response || '';
-};
+import { semanticSkillMatch, generateSummary, getConfig } from './llm.mjs';
 
 export const analyzeApplicationWithLLM = async ({ jobFamily, applicationText, rubric } = {}) => {
   const base = analyzeApplication({ jobFamily, applicationText, rubric });
-  const host = process.env.OLLAMA_HOST || 'http://127.0.0.1:11434';
-  const model = process.env.OLLAMA_MODEL || '';
-  const enabled = process.env.TRIAGE_USE_OLLAMA === '1';
+  const cfg = getConfig();
 
-  if (!enabled) return { ...base, llm: { used: false, reason: 'ollama_disabled' } };
-  if (!model) return { ...base, llm: { used: false, reason: 'ollama_model_missing' } };
+  if (!cfg.enabled) return { ...base, llm: { used: false, reason: 'ollama_disabled' } };
 
-  const prompt =
-    'Du bist ein Recruiting-Analyst. Antworte NUR mit valide JSON.\n' +
-    'Extrahiere aus dem Bewerbungstext:\n' +
-    '1) "additionalClaims": Array mit max 6 Items { "claim": string, "evidence": string[], "risk": "low"|"medium"|"high", "followUpQuestion": string }\n' +
-    '2) "additionalFollowUps": Array mit max 5 Strings\n' +
-    '3) "summary": string (max 3 Saetze)\n\n' +
-    `Job-Familie: ${base.jobFamily}\n` +
-    'Bewerbungstext:\n' +
-    '"""\n' +
-    String(applicationText || '').slice(0, 5000) +
-    '\n"""\n';
+  const def = JOB_FAMILIES[base.jobFamily];
+  const allRequired = (def?.mustHave || []).map(s => s.label);
+  const allNice = (def?.niceToHave || []).map(s => s.label);
 
-  try {
-    const raw = await ollamaGenerate({ host, model, prompt });
-    const parsed = tryParseJSON(raw.trim());
-    if (!parsed) return { ...base, llm: { used: false, reason: 'ollama_invalid_json' } };
+  // Run semantic matching and summary generation in parallel
+  const [semantic, summaryResult] = await Promise.all([
+    semanticSkillMatch({
+      applicationText: String(applicationText || ''),
+      jobFamily: base.jobFamily,
+      requiredSkills: allRequired,
+      niceToHaveSkills: allNice
+    }),
+    generateSummary({
+      applicationText: String(applicationText || ''),
+      jobFamily: base.jobFamily,
+      scores: base.scores
+    })
+  ]);
 
-    const additionalClaims = Array.isArray(parsed.additionalClaims) ? parsed.additionalClaims : [];
-    const additionalFollowUps = Array.isArray(parsed.additionalFollowUps) ? parsed.additionalFollowUps : [];
-    const summary = typeof parsed.summary === 'string' ? parsed.summary : '';
+  const semanticData = semantic.used ? {
+    matchedSkills: semantic.matchedSkills || [],
+    implicitSkills: semantic.implicitSkills || [],
+    missingSkills: semantic.missingSkills || []
+  } : null;
 
-    const mergedClaims = [...base.claims, ...additionalClaims]
-      .filter((c) => c && typeof c.claim === 'string')
-      .slice(0, 14);
-    const mergedFollowUps = [...base.followUps, ...additionalFollowUps]
-      .filter((q) => typeof q === 'string' && q.trim())
-      .slice(0, 10);
-
-    return {
-      ...base,
-      claims: mergedClaims,
-      followUps: mergedFollowUps,
-      llm: { used: true, provider: 'ollama', host, model, summary }
-    };
-  } catch (e) {
-    return { ...base, llm: { used: false, reason: 'ollama_error', error: String(e?.message || e) } };
+  // Boost overall score when LLM finds implicit skills missed by regex
+  let scoreBoost = 0;
+  if (semantic.used && semantic.implicitSkills?.length) {
+    scoreBoost = Math.min(15, semantic.implicitSkills.length * 5);
   }
+  const boostedOverall = clamp(base.scores.overall + scoreBoost, 0, 100);
+
+  return {
+    ...base,
+    scores: { ...base.scores, overall: boostedOverall },
+    summary: summaryResult.used ? summaryResult.summary : null,
+    semanticSkills: semanticData,
+    llm: {
+      used: semantic.used || summaryResult.used,
+      provider: 'ollama',
+      host: cfg.host,
+      model: cfg.model,
+      summary: summaryResult.used ? summaryResult.summary : null,
+      semanticMatching: semantic.used,
+      scoreBoost
+    }
+  };
 };
 
 export { JOB_FAMILIES };

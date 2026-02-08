@@ -4,6 +4,7 @@ import { extname, join } from 'node:path';
 import { analyzeApplication, analyzeApplicationWithLLM, clusterApplications, getTriageDemo } from './triage.mjs';
 import { getStore, nowISO } from './store.mjs';
 import { generateDemoApplication } from './demo.mjs';
+import { generateMessage, generateFollowUp, generateSummary, scoreAssessment, getConfig as getLLMConfig } from './llm.mjs';
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -415,15 +416,40 @@ const handler = async (req, res) => {
       const body = await parseBody(req);
       const cand = candidates.find(c => c.id === body.candidateId) || candidates[0];
       const job = jobs.find(j => j.id === body.jobId) || jobs[0];
-      const out = {
+      const company = companies.find(c => c.id === job.company_id);
+      const context = body.context || '';
+
+      // Generate all 3 tonalities via LLM in parallel
+      const [direct, advisory, visionary] = await Promise.all(
+        ['direct', 'advisory', 'visionary'].map(tone =>
+          generateMessage({ candidateName: cand.name, jobTitle: job.title, companyName: company?.name || '', tonality: tone, context })
+        )
+      );
+
+      const llmUsed = direct.used || advisory.used || visionary.used;
+      const fallback = (tone) => ({
         direct: `Hallo ${cand.name}, wir suchen für ${job.title} in ${job.location_city}. Ihr Profil passt sehr gut. Haben Sie diese Woche 15 Minuten Zeit?`,
-        advisory: `Hallo ${cand.name}, Ihre Erfahrung als ${cand.current_role} wirkt sehr passend. Bei ${companies.find(c=>c.id===job.company_id)?.name} hätten Sie klaren Impact und Entwicklungsspielraum. Das Team arbeitet modern und flexibel. Darf ich Ihnen die Rolle unverbindlich vorstellen?`,
-        visionary: `Hallo ${cand.name}, ${companies.find(c=>c.id===job.company_id)?.name} baut aktuell eine Schlüsselrolle im Bereich ${job.title} auf. Sie könnten die Produkt- und Technologieausrichtung aktiv mitprägen und Sichtbarkeit bis ins Leadership-Team gewinnen. Das Umfeld ist ambitioniert, aber menschlich. Wollen wir dazu kurz sprechen?`,
-        predicted_response_rate: { direct: 0.42, advisory: 0.55, visionary: 0.39 }
+        advisory: `Hallo ${cand.name}, Ihre Erfahrung als ${cand.current_role} wirkt sehr passend. Bei ${company?.name} hätten Sie klaren Impact und Entwicklungsspielraum. Darf ich Ihnen die Rolle unverbindlich vorstellen?`,
+        visionary: `Hallo ${cand.name}, ${company?.name} baut eine Schlüsselrolle im Bereich ${job.title} auf. Sie könnten die Ausrichtung aktiv mitprägen. Wollen wir dazu kurz sprechen?`
+      })[tone];
+
+      const out = {
+        direct: direct.used ? direct.message : fallback('direct'),
+        advisory: advisory.used ? advisory.message : fallback('advisory'),
+        visionary: visionary.used ? visionary.message : fallback('visionary'),
+        predicted_response_rate: { direct: 0.42, advisory: 0.55, visionary: 0.39 },
+        llm: { used: llmUsed, model: direct.model || advisory.model || null }
       };
       return json(res, 200, { success: true, data: out });
     }
-    if (req.method === 'POST' && path === '/api/copilot/followup') return json(res,200,{success:true,data:{text:'Kurzes Follow-up: Ich wollte mich erkundigen, ob die Rolle weiterhin spannend für Sie ist. Gerne passe ich die Rahmenbedingungen an Ihre Erwartungen an.'}});
+    if (req.method === 'POST' && path === '/api/copilot/followup') {
+      const body = await parseBody(req);
+      const cand = candidates.find(c => c.id === body.candidateId) || candidates[0];
+      const job = jobs.find(j => j.id === body.jobId) || jobs[0];
+      const result = await generateFollowUp({ candidateName: cand.name, jobTitle: job.title, previousMessage: body.previousMessage || '', daysSince: body.daysSince || 7 });
+      const text = result.used ? result.message : 'Kurzes Follow-up: Ich wollte mich erkundigen, ob die Rolle weiterhin spannend für Sie ist. Gerne passe ich die Rahmenbedingungen an.';
+      return json(res, 200, { success: true, data: { text, llm: { used: result.used, model: result.model || null } } });
+    }
     if (req.method === 'GET' && path === '/api/copilot/analytics') {
       const data = Object.entries(analytics).map(([tone,v])=>({tone,responseRate:Number((v.responses/v.sent).toFixed(2))}));
       return json(res,200,{success:true,data});
@@ -1083,9 +1109,44 @@ const handler = async (req, res) => {
         const body = await parseBody(req);
         const updated = store.submitAssessment({ tenantId: asmt.tenantId, assessmentId: asmt.id, answers: body?.answers || {} });
         if (app) store.updateApplication(app.id, { assessment: { ...(app.assessment || {}), completedAt: updated.submittedAt } });
-        return json(res, 200, { success: true, data: { submittedAt: updated.submittedAt } });
+
+        // Auto-score answers via LLM if available
+        const tasks = asmt.tasks || [];
+        const answers = body?.answers || {};
+        let scoring = null;
+        const llmCfg = getLLMConfig();
+        if (llmCfg.enabled && Object.keys(answers).length > 0) {
+          try {
+            scoring = await scoreAssessment({ tasks, answers });
+            // Persist scoring result on the assessment
+            if (scoring && scoring.used) {
+              store.db.assessments[asmt.id].scoring = scoring;
+              if (app) {
+                store.updateApplication(app.id, {
+                  assessment: { ...(app.assessment || {}), completedAt: updated.submittedAt, scoring: { percentage: scoring.percentage, recommendation: scoring.recommendation } }
+                });
+              }
+            }
+          } catch { /* scoring is optional */ }
+        }
+
+        return json(res, 200, { success: true, data: { submittedAt: updated.submittedAt, scoring } });
       }
       return json(res, 404, { success: false, error: 'Route nicht gefunden' });
+    }
+
+    // LLM status endpoint
+    if (req.method === 'GET' && path === '/api/llm/status') {
+      const cfg = getLLMConfig();
+      return json(res, 200, { success: true, data: { enabled: cfg.enabled, model: cfg.model, host: cfg.host } });
+    }
+
+    // On-demand summary for any text
+    if (req.method === 'POST' && path === '/api/llm/summary') {
+      const body = await parseBody(req);
+      if (!body?.applicationText) return json(res, 400, { success: false, error: 'applicationText erforderlich' });
+      const result = await generateSummary({ applicationText: body.applicationText, jobFamily: body.jobFamily || 'software', scores: body.scores || {} });
+      return json(res, 200, { success: true, data: result });
     }
 
     if (req.method === 'GET' && path === '/api/triage/demo') {
