@@ -3,16 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RecruiterIQ Login</title>
-  <meta name="description" content="RecruiterIQ Login (Prototype)." />
+  <title>RecruiterIQ — Login</title>
+  <meta name="description" content="Einloggen in RecruiterIQ." />
   <meta property="og:title" content="RecruiterIQ Login" />
   <meta property="og:image" content="/assets/agent-template-og.png" />
   <link rel="stylesheet" href="/marketing.css" />
+  <style>
+    .loginWrap {
+      max-width: 420px;
+      margin: 120px auto 0;
+      text-align: center;
+    }
+    .loginLogo {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: #000;
+      margin: 0 auto 24px;
+    }
+    .loginWrap h1 {
+      font-size: 32px;
+      letter-spacing: -1px;
+      margin: 0 0 8px;
+    }
+    .loginWrap .sub {
+      font-size: 17px;
+      margin: 0 auto;
+      max-width: 340px;
+    }
+    .loginCard {
+      margin-top: 32px;
+      padding: 32px;
+      text-align: left;
+    }
+    .loginCard .field + .field { margin-top: 16px; }
+    .loginCard .cta { margin-top: 24px; }
+    .loginCard .cta .btn { width: 100%; justify-content: center; }
+    .loginFooter {
+      margin-top: 24px;
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: 13px;
+    }
+    .loginFooter a { color: var(--accent); }
+    .loginInfo {
+      margin-top: 32px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      text-align: left;
+    }
+    .loginInfo .callout { padding: 16px; }
+  </style>
 </head>
 <body>
   <div class="wrap">
     <div class="top">
-      <a class="brand" href="/" aria-label="RecruiterIQ Landing">
+      <a class="brand" href="/" aria-label="RecruiterIQ Home">
         <div class="logo" aria-hidden="true"></div>
         <div>
           <strong>RecruiterIQ</strong>
@@ -20,56 +67,54 @@
         </div>
       </a>
       <div class="topnav">
-        <a class="btn" href="/">USPs</a>
+        <a class="btn" href="/">Startseite</a>
         <a class="btn" href="/features">Features</a>
         <a class="btn primary" href="/login">Login</a>
       </div>
     </div>
 
-    <div class="hero" style="grid-template-columns: .95fr 1.05fr">
-      <div class="card heroR" style="min-height:360px">
-        <div class="bgArt" aria-hidden="true"></div>
-        <div class="callout" style="position:relative;inset:auto;box-shadow:none;margin-top:12px">
-          <div class="calloutTitle">Warum Login?</div>
-          <div class="calloutBody">
-            In der Produktversion: Teams, Rollen, Audit, Datenzugriff. Im Prototype: ein simples Gate, damit Landing/Features „davor“ liegen.
-          </div>
-        </div>
-        <div class="callout" style="position:relative;inset:auto;box-shadow:none;margin-top:10px">
-          <div class="calloutTitle">Demo-Accounts</div>
-          <div class="calloutBody">
-            Nach dem Login können Sie in der App oben rechts User/Rollen wechseln (Recruiter/Hiring Manager/Admin).
-          </div>
-        </div>
-      </div>
+    <div class="loginWrap">
+      <div class="loginLogo" aria-hidden="true"></div>
+      <h1>Willkommen zurück</h1>
+      <div class="sub">Loggen Sie sich ein, um RecruiterIQ zu nutzen.</div>
 
-      <div class="card form">
-        <div class="kicker">APP ACCESS</div>
-        <h1 style="margin:12px 0 8px;font-size:34px">Einloggen</h1>
-        <div class="sub" style="font-size:14px">Prototype Login (client-side). In der Produktversion würde hier SSO/SCIM/ATS-Rollen hängen.</div>
-
-        <form id="loginForm" style="margin-top:10px">
+      <div class="card loginCard">
+        <form id="loginForm">
           <div class="field">
             <div class="label">E-Mail</div>
-            <input id="email" autocomplete="email" placeholder="you@company.com" />
+            <input id="email" autocomplete="email" placeholder="name@unternehmen.de" />
           </div>
           <div class="field">
             <div class="label">Passwort</div>
-            <input id="pw" type="password" autocomplete="current-password" placeholder="••••••••" />
+            <input id="pw" type="password" autocomplete="current-password" placeholder="Passwort eingeben" />
             <div class="help">Demo-Passwort: <span class="mono">demo</span></div>
           </div>
-          <div class="cta" style="margin-top:14px">
-            <button class="btn primary" type="submit">Login</button>
-            <a class="btn" id="backBtn" href="/">Zurück</a>
+          <div class="cta" style="margin-top:24px">
+            <button class="btn primary" type="submit">Einloggen</button>
           </div>
-          <div id="err" class="help err" style="margin-top:10px;display:none"></div>
+          <div id="err" class="help err" style="margin-top:12px;display:none;text-align:center"></div>
         </form>
+      </div>
+
+      <div class="loginFooter">
+        <a href="/">Zur Startseite</a> · <a href="/features">Features ansehen</a>
+      </div>
+
+      <div class="loginInfo">
+        <div class="callout">
+          <div class="calloutTitle">Demo-Zugang</div>
+          <div class="calloutBody">Beliebige E-Mail eingeben und als Passwort <span class="mono">demo</span> verwenden.</div>
+        </div>
+        <div class="callout">
+          <div class="calloutTitle">Rollen wechseln</div>
+          <div class="calloutBody">Nach dem Login können Sie oben rechts zwischen Recruiter, HM und Admin wechseln.</div>
+        </div>
       </div>
     </div>
 
     <div class="footer">
-      <div>Nach dem Login landest du automatisch in der App.</div>
-      <div><a href="/">Landing</a> · <a href="/features">Features</a></div>
+      <div>RecruiterIQ — Recruiting Intelligence OS</div>
+      <div><a href="/">Startseite</a> · <a href="/features">Features</a></div>
     </div>
   </div>
 
@@ -83,7 +128,7 @@
         const pw = (document.getElementById('pw').value || '').trim();
         if (pw !== 'demo') {
           $err.style.display = 'block';
-          $err.textContent = 'Falsches Passwort. Nutzen Sie fuer die Demo: demo';
+          $err.textContent = 'Falsches Passwort. Verwenden Sie: demo';
           return;
         }
         localStorage.setItem('rx_auth', '1');
