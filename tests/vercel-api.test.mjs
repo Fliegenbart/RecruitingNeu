@@ -140,7 +140,8 @@ test('Serverless Pilot Seed erzeugt Bewerbungen und listet sie', async () => {
   assert.equal(seed.success, true);
   assert.equal(seed.data.created, 5);
 
-  const listReq = new MockReq('GET', `/api/pilot/applications?tenantId=${tenantId}&jobId=${jobId}&limit=10&page=1&collapsedClusters=1`);
+  // Note: clustering can collapse duplicates; use collapsedClusters=0 to assert raw total.
+  const listReq = new MockReq('GET', `/api/pilot/applications?tenantId=${tenantId}&jobId=${jobId}&limit=10&page=1&collapsedClusters=0`);
   const listRes = new MockRes();
   await handler(listReq, listRes);
   const list = JSON.parse(listRes.body);

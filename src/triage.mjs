@@ -467,6 +467,40 @@ const computeTemplateRisk = (text, evidenceScore) => {
   return { score: risk, breakdown: { genericHits, uniqRatio: Number(uniqRatio.toFixed(2)) } };
 };
 
+const computeEvidencePack = ({ claims = [], mustHave, evidence, templateRisk } = {}) => {
+  const sorted = [...(claims || [])].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  const strongest = sorted.filter((c) => (c.risk || '') === 'low').slice(0, 4);
+  const weakest = sorted.filter((c) => (c.risk || '') !== 'low').slice(0, 4);
+  const summary = {
+    mustHavePassed: Boolean(mustHave?.passed),
+    evidenceScore: Number(evidence?.score || 0),
+    templateRiskScore: Number(templateRisk?.score || 0)
+  };
+  return { summary, strongest, weakest };
+};
+
+const contradictionChecks = (text) => {
+  const t = String(text || '');
+  const flags = [];
+
+  // Very common "too generic" and low-signal patterns.
+  const buzzwordCount = countRegex(t, /\b(innovativ|dynamisch|passionate|motiviert|teamplayer|detailorientiert|schnelle auffassungsgabe|zielorientiert)\b/gi);
+  const numCount = countRegex(t, /\b\d+(?:[.,]\d+)?\b/g);
+  if (buzzwordCount >= 4 && numCount <= 1) flags.push({ id: 'buzzwords_no_evidence', severity: 'medium', message: 'Viele Buzzwords, wenig messbare Evidenz.' });
+
+  // Timeline: too many different years without context can indicate fabricated/templated narrative.
+  const years = Array.from(t.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => Number(m[1]));
+  const uniqYears = Array.from(new Set(years)).sort((a, b) => a - b);
+  if (uniqYears.length >= 6) flags.push({ id: 'many_years', severity: 'low', message: 'Viele Jahreszahlen; Timeline/Zeitraeume im Interview verifizieren.' });
+
+  // Link presence can be good; absence is not bad. But "portfolio mentioned" without link is a flag.
+  const mentionsPortfolio = /\b(portfolio|github|gitlab|projekt)\b/i.test(t);
+  const hasLink = /https?:\/\/\S+/i.test(t);
+  if (mentionsPortfolio && !hasLink) flags.push({ id: 'portfolio_no_link', severity: 'low', message: 'Portfolio/Projekt erwaehnt, aber kein Link angegeben.' });
+
+  return flags;
+};
+
 const computeFitScore = (jobFamily, matchedSkillIds, rubricResolved) => {
   const def = JOB_FAMILIES[jobFamily];
   if (!def) return { score: 0, breakdown: {} };
@@ -611,6 +645,8 @@ export const analyzeApplication = ({ jobFamily, applicationText, rubric } = {}) 
   const evidence = computeEvidenceScore(text, matchedSkillIds.length);
   const templateRisk = computeTemplateRisk(text, evidence.score);
   const claims = extractClaimsHeuristic(text);
+  const flags = contradictionChecks(text);
+  const evidencePack = computeEvidencePack({ claims, mustHave, evidence, templateRisk });
 
   const w = rubricResolved.weights;
   const overall = clamp(
@@ -645,6 +681,8 @@ export const analyzeApplication = ({ jobFamily, applicationText, rubric } = {}) 
       skills: { matched: matchedSkillIds, counts: skillSignals.counts }
     },
     claims,
+    evidencePack,
+    flags,
     followUps,
     microAssessment: rubricResolved.microAssessment,
     llm: { used: false }

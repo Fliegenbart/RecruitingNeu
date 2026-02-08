@@ -140,7 +140,11 @@ regions.forEach((region, i) => {
 });
 
 const json = (res, code, payload) => {
-  res.writeHead(code, { 'Content-Type': 'application/json' });
+  if (typeof res.writeHead === 'function') res.writeHead(code, { 'Content-Type': 'application/json' });
+  else {
+    res.statusCode = code;
+    res.setHeader?.('Content-Type', 'application/json');
+  }
   res.end(JSON.stringify(payload));
 };
 
@@ -188,30 +192,136 @@ const serveStatic = async (res, path) => {
     const filePath = path === '/' ? 'public/index.html' : `public${path}`;
     const content = await readFile(join(process.cwd(), filePath));
     const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
-    res.writeHead(200, { 'Content-Type': types[extname(filePath)] || 'text/plain' });
+    const ct = types[extname(filePath)] || 'text/plain';
+    if (typeof res.writeHead === 'function') res.writeHead(200, { 'Content-Type': ct });
+    else {
+      res.statusCode = 200;
+      res.setHeader?.('Content-Type', ct);
+    }
     res.end(content);
   } catch {
-    res.writeHead(404);
+    if (typeof res.writeHead === 'function') res.writeHead(404);
+    else res.statusCode = 404;
     res.end('Not found');
   }
 };
 
 const parseBody = async (req) => {
-  const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
-  try { return JSON.parse(Buffer.concat(chunks).toString() || '{}'); } catch { return {}; }
+  // Works for both real IncomingMessage (async iterable) and EventEmitter mocks.
+  if (req && typeof req[Symbol.asyncIterator] === 'function') {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    try { return JSON.parse(Buffer.concat(chunks).toString() || '{}'); } catch { return {}; }
+  }
+  return await new Promise((resolve) => {
+    let b = '';
+    req?.on?.('data', (c) => { b += c; });
+    req?.on?.('end', () => {
+      try { resolve(JSON.parse(b || '{}')); } catch { resolve({}); }
+    });
+    // If it's neither iterable nor an emitter, treat as empty.
+    if (!req?.on) resolve({});
+  });
 };
 
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
+const getActorUserId = (req, url) => {
+  const h = req?.headers || {};
+  const fromHeader = h['x-user-id'] || h['X-User-Id'];
+  const fromQuery = url?.searchParams?.get?.('userId');
+  const id = fromHeader || fromQuery || null;
+  return id ? String(id) : null;
+};
+
+const getActor = (store, { tenantId, req, url } = {}) => {
+  const actorUserId = getActorUserId(req, url);
+  if (!actorUserId) return { actorUserId: null, actor: null };
+  const u = store?.db?.users?.[actorUserId] || null;
+  if (u && tenantId && u.tenantId !== tenantId) return { actorUserId: null, actor: null };
+  return { actorUserId, actor: u };
+};
+
+const requireRole = (actor, roles = []) => {
+  if (!roles?.length) return true;
+  if (!actor) return false;
+  return roles.includes(String(actor.role));
+};
+
+const renderTemplate = (s, vars = {}) => {
+  const str = String(s || '');
+  return str.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, k) => {
+    const v = vars?.[k];
+    return v === undefined || v === null ? '' : String(v);
+  });
+};
+
 const listTenantContext = (store) => {
   const tenants = Object.values(store.db.tenants);
   const teams = Object.values(store.db.teams);
+  const users = Object.values(store.db.users || {});
+  const templates = Object.values(store.db.templates || {});
   const jobs = Object.values(store.db.jobs).map((j) => {
     const applicationCount = Object.values(store.db.applications).filter((a) => a.jobId === j.id).length;
     return { ...j, applicationCount };
   });
-  return { tenants, teams, jobs };
+  return { tenants, teams, users, templates, jobs };
+};
+
+const parseCsv = (csvText) => {
+  const s = String(csvText || '');
+  const rows = [];
+  let row = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (s[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else inQ = false;
+      } else cur += ch;
+      continue;
+    }
+    if (ch === '"') {
+      inQ = true;
+      continue;
+    }
+    if (ch === ',') {
+      row.push(cur);
+      cur = '';
+      continue;
+    }
+    if (ch === '\n') {
+      row.push(cur);
+      rows.push(row);
+      row = [];
+      cur = '';
+      continue;
+    }
+    if (ch === '\r') continue;
+    cur += ch;
+  }
+  row.push(cur);
+  rows.push(row);
+  // trim empty trailing rows
+  while (rows.length && rows[rows.length - 1].every((c) => String(c || '').trim() === '')) rows.pop();
+  return rows;
+};
+
+const rowsToObjects = (rows) => {
+  if (!Array.isArray(rows) || rows.length < 2) return [];
+  const header = rows[0].map((h) => String(h || '').trim());
+  const out = [];
+  for (const r of rows.slice(1)) {
+    if (!r || r.every((c) => String(c || '').trim() === '')) continue;
+    const o = {};
+    for (let i = 0; i < header.length; i++) o[header[i]] = r[i];
+    out.push(o);
+  }
+  return out;
 };
 
 const analyzeForJob = async ({ job, text, useLLM = false } = {}) => {
@@ -259,7 +369,8 @@ const clusterJob = (store, { tenantId, jobId } = {}) => {
 };
 
 const handler = async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  const host = req?.headers?.host || '127.0.0.1';
+  const url = new URL(req.url, `http://${host}`);
   const path = url.pathname;
 
   if (path.startsWith('/api/')) {
@@ -320,6 +431,436 @@ const handler = async (req, res) => {
     if (req.method === 'GET' && path === '/api/pilot/context') {
       const store = await getStore();
       return json(res, 200, { success: true, data: listTenantContext(store) });
+    }
+    if (req.method === 'GET' && path === '/api/pilot/worklist') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      const userId = url.searchParams.get('userId');
+      if (!tenantId) return json(res, 400, { success: false, error: 'tenantId erforderlich' });
+      const jobsById = store.db.jobs;
+
+      let apps = Object.values(store.db.applications).filter((a) => a.tenantId === tenantId);
+      if (userId) apps = apps.filter((a) => (a.screening?.assignedRecruiterUserId ? a.screening.assignedRecruiterUserId === userId : true));
+
+      const decorate = (a) => ({
+        id: a.id,
+        jobId: a.jobId,
+        jobTitle: jobsById[a.jobId]?.title || '',
+        candidateName: a.candidateName,
+        submittedAt: a.submittedAt,
+        status: a.status,
+        overall: a.analysis?.scores?.overall ?? null,
+        mustHavePassed: a.analysis?.mustHave?.passed ?? null,
+        templateRisk: a.analysis?.scores?.templateRisk ?? null,
+        evidence: a.analysis?.scores?.evidence ?? null,
+        flags: a.analysis?.flags || [],
+        clusterId: a.clusterId,
+        isClusterRepresentative: a.isClusterRepresentative
+      });
+
+      const sortOverall = (x, y) => (y.analysis?.scores?.overall || 0) - (x.analysis?.scores?.overall || 0);
+      const worklist = {
+        new: apps.filter((a) => a.status === 'new').sort(sortOverall).slice(0, 50).map(decorate),
+        needs_info: apps.filter((a) => a.status === 'needs_info').sort(sortOverall).slice(0, 50).map(decorate),
+        waiting_hm: apps
+          .filter((a) => a.status === 'reviewing' && a.screening?.hmDecision === null)
+          .sort((a, b) => String(a.updatedAt).localeCompare(String(b.updatedAt)))
+          .slice(0, 50)
+          .map(decorate),
+        assessment_due: apps
+          .filter((a) => a.assessment?.sentAt && !a.assessment?.completedAt)
+          .sort((a, b) => String(a.assessment.sentAt).localeCompare(String(b.assessment.sentAt)))
+          .slice(0, 50)
+          .map(decorate)
+      };
+      return json(res, 200, { success: true, data: worklist });
+    }
+    if (req.method === 'GET' && path === '/api/pilot/templates') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      if (!tenantId) return json(res, 400, { success: false, error: 'tenantId erforderlich' });
+      const items = Object.values(store.db.templates || {}).filter((t) => t.tenantId === tenantId);
+      return json(res, 200, { success: true, data: items });
+    }
+    if (req.method === 'POST' && path === '/api/pilot/templates') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      try {
+        const t = store.createTemplate({ tenantId: body?.tenantId, name: body?.name, channel: body?.channel, subject: body?.subject, body: body?.body });
+        return json(res, 200, { success: true, data: t });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'PATCH' && path.startsWith('/api/pilot/templates/')) {
+      const store = await getStore();
+      const parts = path.split('/').filter(Boolean);
+      const templateId = parts[3];
+      const body = await parseBody(req);
+      try {
+        const t = store.db.templates?.[templateId];
+        if (!t || t.tenantId !== body?.tenantId) return json(res, 404, { success: false, error: 'template_not_found' });
+        const updated = store.updateTemplate(templateId, body);
+        return json(res, 200, { success: true, data: updated });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'POST' && path === '/api/pilot/messages/send') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const tenantId = body?.tenantId;
+      const applicationId = body?.applicationId;
+      const templateId = body?.templateId;
+      const app = store.db.applications?.[applicationId];
+      const tpl = store.db.templates?.[templateId];
+      if (!tenantId || !applicationId || !templateId) return json(res, 400, { success: false, error: 'tenantId/applicationId/templateId erforderlich' });
+      if (!app || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
+      if (!tpl || tpl.tenantId !== tenantId) return json(res, 404, { success: false, error: 'template_not_found' });
+
+      const job = store.db.jobs?.[app.jobId];
+      const { actorUserId, actor } = getActor(store, { tenantId, req, url });
+      const sender = store.db.users?.[body?.senderUserId] || actor || null;
+      const vars = {
+        candidateName: app.candidateName,
+        jobTitle: job?.title || '',
+        senderName: sender?.name || 'Recruiting Team',
+        ...(body?.variables || {})
+      };
+      const subject = renderTemplate(tpl.subject, vars);
+      const msgBody = renderTemplate(tpl.body, vars);
+      const msg = store.createMessage({ tenantId, applicationId, channel: tpl.channel, to: body?.to || app.candidateName, subject, body: msgBody, templateId });
+      if (body?.setStatus) store.updateApplication(applicationId, { status: body.setStatus });
+      if (actorUserId) store.addEvent({ tenantId, jobId: app.jobId, applicationId, action: 'message_sent_by_user', payload: { messageId: msg.id }, actorUserId });
+      return json(res, 200, { success: true, data: msg });
+    }
+    if (req.method === 'POST' && path === '/api/pilot/batch') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const tenantId = body?.tenantId;
+      const { actorUserId } = getActor(store, { tenantId, req, url });
+      const ids = Array.isArray(body?.applicationIds) ? body.applicationIds.map(String) : [];
+      if (!tenantId || !ids.length) return json(res, 400, { success: false, error: 'tenantId/applicationIds erforderlich' });
+      const updated = [];
+      for (const id of ids) {
+        const app = store.db.applications?.[id];
+        if (!app || app.tenantId !== tenantId) continue;
+        const beforeStatus = app.status;
+        const u = store.updateApplication(id, { status: body?.status, tags: body?.tags });
+        if (body?.status && beforeStatus !== body.status) store.addEvent({ tenantId, jobId: u.jobId, applicationId: id, action: 'status_changed', payload: { from: beforeStatus, to: body.status }, actorUserId });
+        updated.push(id);
+      }
+      return json(res, 200, { success: true, data: { updated: updated.length } });
+    }
+    if (req.method === 'GET' && path === '/api/pilot/hm/queue') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      const jobId = url.searchParams.get('jobId');
+      if (!tenantId || !jobId) return json(res, 400, { success: false, error: 'tenantId/jobId erforderlich' });
+      const job = store.db.jobs?.[jobId];
+      if (!job || job.tenantId !== tenantId) return json(res, 404, { success: false, error: 'job_not_found' });
+      const minOverall = Number(url.searchParams.get('minOverall') || 75);
+      const apps = Object.values(store.db.applications)
+        .filter((a) => a.tenantId === tenantId && a.jobId === jobId)
+        .filter((a) => a.status === 'shortlisted' || (a.analysis?.scores?.overall || 0) >= minOverall)
+        .sort((a, b) => (b.analysis?.scores?.overall || 0) - (a.analysis?.scores?.overall || 0))
+        .slice(0, 50)
+        .map((a) => ({
+          id: a.id,
+          candidateName: a.candidateName,
+          submittedAt: a.submittedAt,
+          status: a.status,
+          scores: a.analysis?.scores || null,
+          evidencePack: a.analysis?.evidencePack || null,
+          flags: a.analysis?.flags || [],
+          hmDecision: a.screening?.hmDecision ?? null,
+          hmNotes: a.screening?.hmNotes || ''
+        }));
+      return json(res, 200, { success: true, data: { job: { id: job.id, title: job.title, family: job.family }, items: apps } });
+    }
+    if (req.method === 'POST' && path === '/api/pilot/hm/decision') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const tenantId = body?.tenantId;
+      const applicationId = body?.applicationId;
+      const decision = body?.decision; // approve|reject|hold|null
+      if (!tenantId || !applicationId) return json(res, 400, { success: false, error: 'tenantId/applicationId erforderlich' });
+      const app = store.db.applications?.[applicationId];
+      if (!app || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
+      const { actorUserId, actor } = getActor(store, { tenantId, req, url });
+      if (!requireRole(actor, ['hiring_manager', 'admin'])) return json(res, 403, { success: false, error: 'forbidden_hm_role_required' });
+      const updated = store.updateApplication(applicationId, {
+        screening: { hmDecision: decision || null, hmDecidedAt: nowISO(), hmNotes: String(body?.notes || '').slice(0, 2000) }
+      });
+      store.addEvent({ tenantId, jobId: updated.jobId, applicationId, action: 'hm_decision', payload: { decision: decision || null }, actorUserId });
+      return json(res, 200, { success: true, data: updated.screening });
+    }
+    if (req.method === 'GET' && path === '/api/pilot/analytics') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      if (!tenantId) return json(res, 400, { success: false, error: 'tenantId erforderlich' });
+
+      const apps = Object.values(store.db.applications).filter((a) => a.tenantId === tenantId);
+      const events = store.db.events.filter((e) => e.tenantId === tenantId);
+      const jobs = Object.values(store.db.jobs).filter((j) => j.tenantId === tenantId);
+
+      const createdAtByApp = new Map();
+      for (const e of events) if (e.action === 'application_created' && e.applicationId) createdAtByApp.set(e.applicationId, e.createdAt);
+
+      const firstStatusChange = new Map();
+      for (const e of events) {
+        if (e.action !== 'status_changed' || !e.applicationId) continue;
+        if (!firstStatusChange.has(e.applicationId)) firstStatusChange.set(e.applicationId, e.createdAt);
+      }
+
+      const ms = (isoA, isoB) => {
+        const a = Date.parse(isoA || '');
+        const b = Date.parse(isoB || '');
+        if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+        return b - a;
+      };
+
+      const ttfr = [];
+      for (const a of apps) {
+        const c = createdAtByApp.get(a.id) || a.submittedAt;
+        const f = firstStatusChange.get(a.id);
+        const d = ms(c, f);
+        if (d !== null) ttfr.push(d);
+      }
+      const avg = (arr) => (arr.length ? Math.round(arr.reduce((x, y) => x + y, 0) / arr.length) : 0);
+
+      const byJob = jobs.map((j) => {
+        const ja = apps.filter((a) => a.jobId === j.id);
+        const shortlisted = ja.filter((a) => a.status === 'shortlisted');
+        const rejected = ja.filter((a) => a.status === 'rejected');
+        const reviewing = ja.filter((a) => a.status === 'reviewing');
+        return {
+          jobId: j.id,
+          title: j.title,
+          family: j.family,
+          total: ja.length,
+          new: ja.filter((a) => a.status === 'new').length,
+          reviewing: reviewing.length,
+          shortlisted: shortlisted.length,
+          rejected: rejected.length,
+          avgOverallShortlisted: shortlisted.length ? Math.round(shortlisted.reduce((acc, a) => acc + (a.analysis?.scores?.overall || 0), 0) / shortlisted.length) : 0
+        };
+      });
+
+      return json(res, 200, {
+        success: true,
+        data: {
+          totals: { applications: apps.length, avgTimeToFirstReviewMs: avg(ttfr) },
+          byJob
+        }
+      });
+    }
+    if (req.method === 'GET' && path === '/api/pilot/export/applications.csv') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      const jobId = url.searchParams.get('jobId');
+      if (!tenantId || !jobId) return json(res, 400, { success: false, error: 'tenantId/jobId erforderlich' });
+      const job = store.db.jobs?.[jobId];
+      if (!job || job.tenantId !== tenantId) return json(res, 404, { success: false, error: 'job_not_found' });
+
+      const rows = Object.values(store.db.applications)
+        .filter((a) => a.tenantId === tenantId && a.jobId === jobId)
+        .sort((a, b) => String(b.submittedAt).localeCompare(String(a.submittedAt)))
+        .map((a) => [
+          a.id,
+          a.candidateName,
+          a.status,
+          String(a.analysis?.scores?.overall ?? ''),
+          String(a.analysis?.scores?.evidence ?? ''),
+          String(a.analysis?.scores?.templateRisk ?? ''),
+          String(a.analysis?.mustHave?.passed ?? ''),
+          String(a.screening?.hmDecision ?? ''),
+          String(a.submittedAt || '')
+        ]);
+
+      const header = ['id', 'candidateName', 'status', 'overall', 'evidence', 'templateRisk', 'mustHavePassed', 'hmDecision', 'submittedAt'];
+      const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const csv = [header.map(csvEscape).join(','), ...rows.map((r) => r.map(csvEscape).join(','))].join('\n');
+      res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8' });
+      res.end(csv);
+      return;
+    }
+
+    if (req.method === 'GET' && path === '/api/pilot/export/events.csv') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      if (!tenantId) return json(res, 400, { success: false, error: 'tenantId erforderlich' });
+      const events = store.db.events.filter((e) => e.tenantId === tenantId).slice().sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+      const header = ['id', 'createdAt', 'tenantId', 'jobId', 'applicationId', 'actorUserId', 'action', 'payload'];
+      const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const rows = events.map((e) => [e.id, e.createdAt, e.tenantId, e.jobId || '', e.applicationId || '', e.actorUserId || '', e.action, JSON.stringify(e.payload || {})]);
+      const csv = [header.map(csvEscape).join(','), ...rows.map((r) => r.map(csvEscape).join(','))].join('\n');
+      res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8' });
+      res.end(csv);
+      return;
+    }
+
+    if (req.method === 'POST' && path === '/api/pilot/import/applications.csv') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const tenantId = body?.tenantId;
+      const jobId = body?.jobId;
+      const csv = body?.csv;
+      if (!tenantId || !jobId || !csv) return json(res, 400, { success: false, error: 'tenantId/jobId/csv erforderlich' });
+      const job = store.db.jobs?.[jobId];
+      if (!job || job.tenantId !== tenantId) return json(res, 404, { success: false, error: 'job_not_found' });
+      const rows = parseCsv(csv);
+      const objs = rowsToObjects(rows);
+      let created = 0;
+      for (const o of objs.slice(0, 1000)) {
+        const candidateName = o.candidateName || o.name || o.candidate || '';
+        const text = o.text || o.applicationText || o.coverLetter || o.raw || '';
+        if (!String(candidateName).trim() || !String(text).trim()) continue;
+        const app = store.createApplication({ tenantId, jobId, candidateName, source: o.source || 'import', text });
+        const analysis = await analyzeForJob({ job, text: app.text, useLLM: false });
+        store.updateApplication(app.id, { analysis });
+        created++;
+      }
+      const cluster = clusterJob(store, { tenantId, jobId });
+      return json(res, 200, { success: true, data: { created, clustered: cluster?.clusters?.length || 0 } });
+    }
+
+    if (req.method === 'GET' && path === '/api/pilot/sequences') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      if (!tenantId) return json(res, 400, { success: false, error: 'tenantId erforderlich' });
+      const items = Object.values(store.db.sequences || {}).filter((s) => s.tenantId === tenantId);
+      return json(res, 200, { success: true, data: items });
+    }
+    if (req.method === 'POST' && path === '/api/pilot/sequences') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      try {
+        const seq = store.createSequence({ tenantId: body?.tenantId, name: body?.name, steps: body?.steps });
+        return json(res, 200, { success: true, data: seq });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'PATCH' && path.startsWith('/api/pilot/sequences/')) {
+      const store = await getStore();
+      const parts = path.split('/').filter(Boolean);
+      const sequenceId = parts[3];
+      const body = await parseBody(req);
+      try {
+        const seq = store.db.sequences?.[sequenceId];
+        if (!seq || seq.tenantId !== body?.tenantId) return json(res, 404, { success: false, error: 'sequence_not_found' });
+        const updated = store.updateSequence(sequenceId, body);
+        return json(res, 200, { success: true, data: updated });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'POST' && path === '/api/pilot/sequences/enroll') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      try {
+        const enr = store.enrollSequence({ tenantId: body?.tenantId, sequenceId: body?.sequenceId, applicationId: body?.applicationId });
+        return json(res, 200, { success: true, data: enr });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'POST' && path === '/api/pilot/sequences/run') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const tenantId = body?.tenantId;
+      if (!tenantId) return json(res, 400, { success: false, error: 'tenantId erforderlich' });
+      const now = Date.now();
+      const due = Object.values(store.db.enrollments || {})
+        .filter((e) => e.tenantId === tenantId && e.status === 'active')
+        .filter((e) => Date.parse(e.nextDueAt || '') <= now);
+      let sent = 0;
+      for (const e of due.slice(0, 200)) {
+        const seq = store.db.sequences?.[e.sequenceId];
+        const app = store.db.applications?.[e.applicationId];
+        if (!seq || !app) {
+          store.advanceEnrollment(e.id, { status: 'paused' });
+          continue;
+        }
+        const step = seq.steps?.[e.stepIndex];
+        if (!step) {
+          store.advanceEnrollment(e.id, { status: 'done', nextDueAt: null });
+          continue;
+        }
+        const tpl = store.db.templates?.[step.templateId];
+        if (!tpl) {
+          store.advanceEnrollment(e.id, { status: 'paused' });
+          continue;
+        }
+        const job = store.db.jobs?.[app.jobId];
+        const vars = { candidateName: app.candidateName, jobTitle: job?.title || '', senderName: 'Recruiting Team', ...(step.variables || {}) };
+        const subject = renderTemplate(tpl.subject, vars);
+        const msgBody = renderTemplate(tpl.body, vars);
+        store.createMessage({ tenantId, applicationId: app.id, channel: tpl.channel, to: app.candidateName, subject, body: msgBody, templateId: tpl.id, meta: { sequenceId: seq.id, enrollmentId: e.id, stepIndex: e.stepIndex } });
+        sent++;
+        const nextIndex = e.stepIndex + 1;
+        const nextStep = seq.steps?.[nextIndex];
+        if (!nextStep) store.advanceEnrollment(e.id, { status: 'done', stepIndex: nextIndex, nextDueAt: null });
+        else {
+          const nextDue = new Date(Date.now() + (Number(nextStep.afterDays) || 0) * 86400000).toISOString();
+          store.advanceEnrollment(e.id, { stepIndex: nextIndex, nextDueAt: nextDue });
+        }
+      }
+      return json(res, 200, { success: true, data: { sent } });
+    }
+
+    if (req.method === 'GET' && path === '/api/pilot/scorecards') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      const applicationId = url.searchParams.get('applicationId');
+      if (!tenantId || !applicationId) return json(res, 400, { success: false, error: 'tenantId/applicationId erforderlich' });
+      const items = Object.values(store.db.scorecards || {}).filter((s) => s.tenantId === tenantId && s.applicationId === applicationId);
+      return json(res, 200, { success: true, data: items });
+    }
+    if (req.method === 'POST' && path === '/api/pilot/scorecards') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const tenantId = body?.tenantId;
+      try {
+        const { actorUserId } = getActor(store, { tenantId, req, url });
+        const row = store.upsertScorecard({
+          tenantId,
+          applicationId: body?.applicationId,
+          userId: actorUserId,
+          role: body?.role || 'recruiter',
+          criteria: body?.criteria || [],
+          recommendation: body?.recommendation || 'maybe',
+          notes: body?.notes || ''
+        });
+        return json(res, 200, { success: true, data: row });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+
+    if (req.method === 'GET' && path === '/api/pilot/interview-kit') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      const applicationId = url.searchParams.get('applicationId');
+      if (!tenantId || !applicationId) return json(res, 400, { success: false, error: 'tenantId/applicationId erforderlich' });
+      const app = store.db.applications?.[applicationId];
+      if (!app || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
+      const job = store.db.jobs?.[app.jobId];
+      const flags = app.analysis?.flags || [];
+      const strongest = app.analysis?.evidencePack?.strongest || [];
+      const weakest = app.analysis?.evidencePack?.weakest || [];
+      const qs = [];
+      for (const f of flags) {
+        if (f?.type === 'buzzwords_no_evidence') qs.push('Nenne 2 konkrete Projekte (mit Link/Repo), in denen du die genannten Technologien wirklich eingesetzt hast. Was war dein Anteil?');
+        if (f?.type === 'years_suspicious') qs.push('Kannst du die Zeitlinie (Jahre/Arbeitgeber/Role) kurz und konsistent auflisten?');
+        if (f?.type === 'portfolio_no_link') qs.push('Bitte sende 1-2 Links (Portfolio/GitHub/Case Study). Was ist dein bestes Beispiel und warum?');
+      }
+      for (const c of strongest.slice(0, 2)) qs.push(`Deep dive: "${c.claim}" – wie genau gemessen? Welche Metriken? Was waren Trade-offs?`);
+      for (const c of weakest.slice(0, 2)) qs.push(`Evidence gap: "${c.claim}" – welche artefaktische Evidenz (Link, Ticket, KPI, Demo) kannst du liefern?`);
+      if (job?.family === 'software') qs.push('Live task: Debug-Session. Erklaere deinen Ansatz und welche Hypothesen du testest.');
+      if (job?.family === 'sales') qs.push('Rollenspiel: Cold Outreach + Objection Handling. Welche Discovery-Fragen stellst du zuerst?');
+      return json(res, 200, { success: true, data: { applicationId, job: { id: job?.id, title: job?.title || '' }, questions: Array.from(new Set(qs)).slice(0, 12) } });
     }
     if (req.method === 'POST' && path === '/api/pilot/tenants') {
       const store = await getStore();
@@ -467,38 +1008,82 @@ const handler = async (req, res) => {
         const app = store.db.applications[applicationId];
         if (!app || (tenantId && app.tenantId !== tenantId)) return json(res, 404, { success: false, error: 'application_not_found' });
         const events = store.db.events.filter((e) => e.applicationId === applicationId).slice(-60);
-        return json(res, 200, { success: true, data: { application: app, events } });
+        const norm = (s) => String(s || '').trim().toLowerCase();
+        const related = tenantId
+          ? Object.values(store.db.applications)
+              .filter((a) => a.tenantId === tenantId && a.id !== app.id)
+              .filter((a) => norm(a.candidateName) && norm(a.candidateName) === norm(app.candidateName))
+              .slice(0, 8)
+              .map((a) => ({ id: a.id, jobId: a.jobId, jobTitle: store.db.jobs?.[a.jobId]?.title || '', status: a.status, submittedAt: a.submittedAt }))
+          : [];
+        return json(res, 200, { success: true, data: { application: app, events, related } });
       }
 
       if (req.method === 'PATCH' && parts.length === 4) {
         const body = await parseBody(req);
         const tenantId = body?.tenantId;
+        const { actorUserId } = getActor(store, { tenantId, req, url });
         const app = store.db.applications[applicationId];
         if (!app || !tenantId || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
         const beforeStatus = app.status;
         const updated = store.updateApplication(applicationId, { status: body?.status, tags: body?.tags });
-        if (body?.status && beforeStatus !== body.status) store.addEvent({ tenantId, jobId: updated.jobId, applicationId, action: 'status_changed', payload: { from: beforeStatus, to: body.status } });
+        if (body?.status && beforeStatus !== body.status) store.addEvent({ tenantId, jobId: updated.jobId, applicationId, action: 'status_changed', payload: { from: beforeStatus, to: body.status }, actorUserId });
         return json(res, 200, { success: true, data: updated });
       }
 
       if (req.method === 'POST' && parts.length === 5 && parts[4] === 'note') {
         const body = await parseBody(req);
         const tenantId = body?.tenantId;
+        const { actorUserId } = getActor(store, { tenantId, req, url });
         const app = store.db.applications[applicationId];
         if (!app || !tenantId || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
         const note = store.addNote(applicationId, { text: body?.text });
+        if (actorUserId) store.addEvent({ tenantId, jobId: app.jobId, applicationId, action: 'note_added_by_user', payload: { noteId: note.id }, actorUserId });
         return json(res, 200, { success: true, data: note });
       }
 
       if (req.method === 'POST' && parts.length === 6 && parts[4] === 'assessment' && parts[5] === 'send') {
         const body = await parseBody(req);
         const tenantId = body?.tenantId;
+        const { actorUserId } = getActor(store, { tenantId, req, url });
         const app = store.db.applications[applicationId];
         if (!app || !tenantId || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
-        const updated = store.updateApplication(applicationId, { assessment: { sentAt: nowISO() } });
-        store.addEvent({ tenantId, jobId: updated.jobId, applicationId, action: 'assessment_sent', payload: {} });
-        return json(res, 200, { success: true, data: updated.assessment });
+        const tasks = app.analysis?.microAssessment?.tasks || [];
+        const asmt = store.createAssessment({ tenantId, applicationId, tasks });
+        const updated = store.updateApplication(applicationId, { assessment: { sentAt: nowISO(), completedAt: null, assessmentId: asmt.id, token: asmt.token } });
+        store.addEvent({ tenantId, jobId: updated.jobId, applicationId, action: 'assessment_sent', payload: { assessmentId: asmt.id }, actorUserId });
+        return json(res, 200, { success: true, data: { ...updated.assessment, link: `/assessment?token=${encodeURIComponent(asmt.token)}` } });
       }
+    }
+
+    if (path.startsWith('/api/public/assessment/')) {
+      const store = await getStore();
+      const parts = path.split('/').filter(Boolean); // api public assessment :token [submit]
+      const token = parts[3];
+      const asmt = Object.values(store.db.assessments || {}).find((a) => a.token === token) || null;
+      if (!asmt) return json(res, 404, { success: false, error: 'assessment_not_found' });
+      const app = store.db.applications?.[asmt.applicationId] || null;
+      const job = app ? store.db.jobs?.[app.jobId] : null;
+      if (req.method === 'GET' && parts.length === 4) {
+        return json(res, 200, {
+          success: true,
+          data: {
+            assessmentId: asmt.id,
+            token: asmt.token,
+            submittedAt: asmt.submittedAt,
+            candidateName: app?.candidateName || '',
+            jobTitle: job?.title || '',
+            tasks: asmt.tasks || []
+          }
+        });
+      }
+      if (req.method === 'POST' && parts.length === 5 && parts[4] === 'submit') {
+        const body = await parseBody(req);
+        const updated = store.submitAssessment({ tenantId: asmt.tenantId, assessmentId: asmt.id, answers: body?.answers || {} });
+        if (app) store.updateApplication(app.id, { assessment: { ...(app.assessment || {}), completedAt: updated.submittedAt } });
+        return json(res, 200, { success: true, data: { submittedAt: updated.submittedAt } });
+      }
+      return json(res, 404, { success: false, error: 'Route nicht gefunden' });
     }
 
     if (req.method === 'GET' && path === '/api/triage/demo') {
