@@ -394,3 +394,54 @@ input:focus, textarea:focus, select:focus{border-color: rgba(31,215,176,.42); bo
   .stats{grid-template-columns: 1fr}
   .logoTrack{animation-duration: 20s}
 }
+.shotFrame{
+  position:relative;
+  border: 1px solid rgba(230,232,245,.92);
+  border-radius: 18px;
+  overflow:hidden;
+  background: #ffffff;
+  box-shadow: 0 22px 70px rgba(8,12,24,.12);
+}
+.shotFrame::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height: 38px;
+  background: linear-gradient(135deg, rgba(31,215,176,.14), rgba(63,124,255,.10));
+  border-bottom: 1px solid rgba(230,232,245,.92);
+}
+.shotDots{
+  position:absolute;
+  top: 13px;
+  left: 14px;
+  display:flex;
+  gap: 7px;
+}
+.shotDots span{
+  width: 9px;
+  height: 9px;
+  border-radius: 99px;
+  background: rgba(11,16,32,.10);
+  border: 1px solid rgba(11,16,32,.08);
+}
+.shotFrame img{
+  display:block;
+  width:100%;
+  height:auto;
+  margin-top: 38px;
+}
+.shotCaption{
+  margin-top: 10px;
+  color: rgba(11,16,32,.62);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.shotGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.shotSmall img{margin-top: 30px}
+.shotSmall::before{height: 30px}
+.shotSmall .shotDots{top: 10px}
