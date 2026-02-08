@@ -94,6 +94,52 @@ h1{
   font-size:46px;line-height:1.02;
   letter-spacing:-.9px;
 }
+
+.heroCenter{
+  position:relative;
+  padding:68px 0 24px;
+}
+.heroCenterBg{
+  position:absolute;inset:0;
+  border-radius: 26px;
+  background:
+    radial-gradient(125% 125% at 50% 10%, rgba(255,255,255,.95) 38%, rgba(251,252,255,.92) 60%, rgba(247,248,253,.85) 100%);
+  border: 1px solid rgba(230,232,245,.9);
+  box-shadow: 0 26px 80px rgba(8,12,24,.10);
+}
+.heroCenterInner{
+  position:relative;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 18px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  text-align:center;
+}
+.heroCenterInner .sub{max-width:72ch}
+.heroCenterInner .cta{justify-content:center}
+.heroCenterInner .metaRow{justify-content:center}
+
+.productCard{padding:22px}
+.productGrid{
+  display:grid;
+  grid-template-columns: 1.1fr .9fr;
+  gap:20px;
+  align-items:center;
+}
+.productArt{
+  border:1px solid rgba(230,232,245,.9);
+  background: linear-gradient(180deg, rgba(251,252,255,.9), rgba(247,248,253,.85));
+  border-radius: 18px;
+  padding:14px;
+  overflow:hidden;
+}
+.productArt img{width:100%;height:auto;display:block}
+.productCopy h2{margin:0 0 10px;font-size:18px;letter-spacing:.2px}
+.productCopy .sub{font-size:14px;max-width:none}
+
 .sub{color:var(--muted);font-size:16px;line-height:1.55;max-width:64ch}
 
 .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
@@ -178,4 +224,6 @@ input:focus, textarea:focus, select:focus{border-color: rgba(31,215,176,.42); bo
   .grid2{grid-template-columns:1fr}
   .bento{grid-template-columns:1fr}
   .bento .span2,.bento .span3{grid-column: span 1}
+  .heroCenter{padding:56px 0 18px}
+  .productGrid{grid-template-columns: 1fr}
 }
