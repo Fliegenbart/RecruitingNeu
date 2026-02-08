@@ -3,11 +3,109 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RecruiterIQ OS</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <title>RecruiterIQ: Evidence-First Recruiting Inbox</title>
+  <link rel="stylesheet" href="/landing.css" />
 </head>
 <body>
-  <div id="app"></div>
-  <script type="module" src="/app.js"></script>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <strong>RecruiterIQ</strong>
+          <div style="color:rgba(233,238,252,.62);font-size:12px">Recruiting OS Prototyp</div>
+        </div>
+      </div>
+      <div class="topnav">
+        <a class="btn" href="#features">Features</a>
+        <a class="btn" href="#usps">USPs</a>
+        <a class="btn primary" href="/dashboard">Demo öffnen</a>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="card heroL">
+        <div class="kicker">EVIDENCE-FIRST · ANTI-TEMPLATE · LOCAL-LLM OPTIONAL</div>
+        <h1>Bewerbungen werden "perfekt". Wir machen sie überprüfbar.</h1>
+        <div class="sub">
+          Recruiter bekommen immer mehr KI-optimierte Bewerbungen. RecruiterIQ sortiert nicht nach "KI-Erkennung",
+          sondern nach <strong>Belegbarkeit</strong>: Claims, Evidence, Widersprüche, Proof-of-Work und klare nächste Schritte.
+        </div>
+
+        <div class="cta">
+          <a class="btn primary" href="/inbox">Inbox Demo</a>
+          <a class="btn" href="/worklist">Worklist</a>
+          <a class="btn" href="/hm">Hiring Manager Portal</a>
+        </div>
+
+        <div class="metaRow">
+          <span class="pill"><span class="dot"></span>Multi-Tenant Pilot Inbox</span>
+          <span class="pill"><span class="dot b"></span>Audit + CSV Export/Import</span>
+          <span class="pill"><span class="dot w"></span>Proof-of-Work Links</span>
+        </div>
+      </div>
+
+      <div class="card heroR">
+        <div class="section">
+          <h2>Was du in 5 Minuten siehst</h2>
+          <div class="list">
+            <ul>
+              <li>Inbox mit Must-have Gate, Duplikat-Clustering und Batch Actions</li>
+              <li>Evidence Pack: strongest/weakest Claims + Flags</li>
+              <li>Templates + Sequences (Drip) direkt aus der Bewerbung</li>
+              <li>Proof-of-Work Assessment als öffentlicher Link</li>
+              <li>Hiring Manager Queue + Entscheidungen</li>
+            </ul>
+          </div>
+        </div>
+        <div class="section">
+          <h2>Für wen?</h2>
+          <div class="list">
+            <ul>
+              <li>Recruiter und Talent Acquisition Teams</li>
+              <li>HR Departments mit hohem Inbound-Volumen</li>
+              <li>Hiring Manager, die schnelle, begründete Entscheidungen wollen</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="usps">
+      <div class="card mini">
+        <h3>USP 1: Evidence statt "KI-Detektor"</h3>
+        <p>Wir bewerten die <em>Belegbarkeit</em> von Claims (Artefakte, Links, Metriken) und markieren Evidence Gaps.</p>
+      </div>
+      <div class="card mini">
+        <h3>USP 2: Proof-of-Work als Filter</h3>
+        <p>Automatisch generierte Micro-Tasks und ein öffentlicher Assessment-Link: echte Signalqualität statt perfekter Texte.</p>
+      </div>
+      <div class="card mini">
+        <h3>USP 3: Workflow, nicht nur Scoring</h3>
+        <p>Templates, Sequences, HM-Queue, Scorecards, Audit und Exporte: alles in einem Recruiting-Inbox-Flow.</p>
+      </div>
+    </div>
+
+    <div class="card list section" id="features">
+      <h2>Features (Auszug)</h2>
+      <ul>
+        <li><strong>Worklist</strong>: New / Needs Info / Waiting HM / Assessment Due</li>
+        <li><strong>Inbox</strong>: Filter, Pagination, Batch Status, Notes, Audit-Trail</li>
+        <li><strong>Triage</strong>: Must-have Gate, Fit/Evidence/TemplateRisk Scores, Flags</li>
+        <li><strong>Duplikate</strong>: Clustering (REP/DUP) pro Job + Hinweise auf gleiche Namen</li>
+        <li><strong>Kommunikation</strong>: Template-Send mit Variablen (z.B. <span class="mono">{{candidateName}}</span>)</li>
+        <li><strong>Sequences</strong>: Drip-Kampagnen + "Run due" Scheduler-Simulation</li>
+        <li><strong>Proof-of-Work</strong>: öffentliche Assessment-Links + Completion Tracking</li>
+        <li><strong>HM Portal</strong>: Queue + Approve/Hold/Reject</li>
+        <li><strong>Integrationen (Stub)</strong>: CSV Import/Export (ATS) + Audit Export</li>
+        <li><strong>Local LLM optional</strong>: via Ollama für Enrichment, nicht zwingend nötig</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      <div>Prototype. Fokus: schnelle Demo, klare USPs, evidence-first Filterung.</div>
+      <div><a href="/dashboard">Demo öffnen</a> · <a href="/inbox">Inbox</a> · <a href="/triage">Triage</a></div>
+    </div>
+  </div>
 </body>
 </html>

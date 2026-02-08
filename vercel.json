@@ -3,13 +3,17 @@
   "builds": [
     { "src": "api/[...route].mjs", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "app.html", "use": "@vercel/static" },
     { "src": "app.js", "use": "@vercel/static" },
-    { "src": "styles.css", "use": "@vercel/static" }
+    { "src": "styles.css", "use": "@vercel/static" },
+    { "src": "landing.css", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "^/api(?:/(.*))?$", "dest": "/api/[...route].mjs" },
+    { "src": "^/$", "dest": "/index.html" },
     { "src": "^/app\\.js$", "dest": "/app.js" },
     { "src": "^/styles\\.css$", "dest": "/styles.css" },
-    { "src": "^/(.*)$", "dest": "/index.html" }
+    { "src": "^/landing\\.css$", "dest": "/landing.css" },
+    { "src": "^/(.*)$", "dest": "/app.html" }
   ]
 }

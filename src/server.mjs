@@ -1181,9 +1181,11 @@ const handler = async (req, res) => {
   }
 
   if (path === '/' || path === '/index.html') return serveStatic(res, '/');
-  if (path === '/app.js' || path === '/styles.css') return serveStatic(res, path);
-  // SPA fallback
-  return serveStatic(res, '/');
+  if (path === '/app.html') return serveStatic(res, '/app.html');
+  if (path === '/app.js' || path === '/styles.css' || path === '/landing.css') return serveStatic(res, path);
+
+  // SPA fallback: app shell for all non-API routes.
+  return serveStatic(res, '/app.html');
 };
 
 const server = createServer(handler);
