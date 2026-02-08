@@ -1,0 +1,4 @@
+.DS_Store
+
+# Local prototype persistence (optional)
+data/db.json

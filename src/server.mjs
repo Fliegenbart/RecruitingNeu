@@ -1,6 +1,9 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { analyzeApplication, analyzeApplicationWithLLM, clusterApplications, getTriageDemo } from './triage.mjs';
+import { getStore, nowISO } from './store.mjs';
+import { generateDemoApplication } from './demo.mjs';
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -199,7 +202,63 @@ const parseBody = async (req) => {
   try { return JSON.parse(Buffer.concat(chunks).toString() || '{}'); } catch { return {}; }
 };
 
-const server = createServer(async (req, res) => {
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+const listTenantContext = (store) => {
+  const tenants = Object.values(store.db.tenants);
+  const teams = Object.values(store.db.teams);
+  const jobs = Object.values(store.db.jobs).map((j) => {
+    const applicationCount = Object.values(store.db.applications).filter((a) => a.jobId === j.id).length;
+    return { ...j, applicationCount };
+  });
+  return { tenants, teams, jobs };
+};
+
+const analyzeForJob = async ({ job, text, useLLM = false } = {}) => {
+  const opts = { jobFamily: job.family, applicationText: text, rubric: job.rubric || {} };
+  return useLLM ? await analyzeApplicationWithLLM(opts) : analyzeApplication(opts);
+};
+
+const reanalyzeJob = async (store, { tenantId, jobId, useLLM = false } = {}) => {
+  const job = store.db.jobs[jobId];
+  if (!job || job.tenantId !== tenantId) throw new Error('job_not_found');
+  const apps = Object.values(store.db.applications).filter((a) => a.tenantId === tenantId && a.jobId === jobId);
+  for (const a of apps) {
+    const analysis = await analyzeForJob({ job, text: a.text, useLLM });
+    store.updateApplication(a.id, { analysis });
+  }
+  store.addEvent({ tenantId, jobId, action: 'job_reanalyzed', payload: { count: apps.length } });
+  return { count: apps.length };
+};
+
+const clusterJob = (store, { tenantId, jobId } = {}) => {
+  const job = store.db.jobs[jobId];
+  if (!job || job.tenantId !== tenantId) throw new Error('job_not_found');
+
+  const apps = Object.values(store.db.applications).filter((a) => a.tenantId === tenantId && a.jobId === jobId);
+  const threshold = Number.isFinite(Number(job?.rubric?.clusterThreshold)) ? Number(job.rubric.clusterThreshold) : 0.82;
+  const shingleSize = Number.isFinite(Number(job?.rubric?.shingleSize)) ? Number(job.rubric.shingleSize) : 3;
+
+  const input = apps.map((a) => ({ id: a.id, text: a.text }));
+  const clustered = clusterApplications({ applications: input, threshold, shingleSize });
+
+  // Reset
+  for (const a of apps) store.updateApplication(a.id, { clusterId: null, isClusterRepresentative: false });
+
+  const clusters = (clustered.clusters || []).map((c) => {
+    const cid = `${jobId}_${c.clusterId}`;
+    for (const id of c.items) store.updateApplication(id, { clusterId: cid, isClusterRepresentative: id === c.representativeId });
+    return { ...c, clusterId: cid };
+  });
+
+  const summary = { computedAt: nowISO(), threshold: clustered.threshold, shingleSize: clustered.shingleSize, clusters };
+  store.setJobCluster(jobId, summary);
+  store.addEvent({ tenantId, jobId, action: 'job_clustered', payload: { clusters: clusters.length } });
+
+  return summary;
+};
+
+const handler = async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
 
@@ -255,6 +314,208 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && path === '/api/copilot/analytics') {
       const data = Object.entries(analytics).map(([tone,v])=>({tone,responseRate:Number((v.responses/v.sent).toFixed(2))}));
       return json(res,200,{success:true,data});
+    }
+
+    // --- Pilot: Multi-tenant Bewerbungs-Inbox
+    if (req.method === 'GET' && path === '/api/pilot/context') {
+      const store = await getStore();
+      return json(res, 200, { success: true, data: listTenantContext(store) });
+    }
+    if (req.method === 'POST' && path === '/api/pilot/tenants') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const tenant = store.createTenant({ name: body?.name });
+      return json(res, 200, { success: true, data: tenant });
+    }
+    if (req.method === 'POST' && path === '/api/pilot/teams') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      try {
+        const team = store.createTeam({ tenantId: body?.tenantId, name: body?.name });
+        return json(res, 200, { success: true, data: team });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'POST' && path === '/api/pilot/jobs') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      try {
+        const job = store.createJob({
+          tenantId: body?.tenantId,
+          teamId: body?.teamId,
+          title: body?.title,
+          family: body?.family,
+          location: body?.location,
+          rubric: body?.rubric
+        });
+        return json(res, 200, { success: true, data: job });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'PATCH' && path.startsWith('/api/pilot/jobs/') && path.endsWith('/rubric')) {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const parts = path.split('/').filter(Boolean);
+      const jobId = parts[3];
+      try {
+        const job = store.db.jobs[jobId];
+        if (!job || job.tenantId !== body?.tenantId) return json(res, 404, { success: false, error: 'job_not_found' });
+        const updated = store.updateJobRubric(jobId, body?.rubric);
+        if (body?.reanalyze) await reanalyzeJob(store, { tenantId: body.tenantId, jobId, useLLM: false });
+        if (body?.recluster) clusterJob(store, { tenantId: body.tenantId, jobId });
+        return json(res, 200, { success: true, data: updated });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'POST' && path.startsWith('/api/pilot/jobs/') && path.endsWith('/reanalyze')) {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const parts = path.split('/').filter(Boolean);
+      const jobId = parts[3];
+      try {
+        const data = await reanalyzeJob(store, { tenantId: body?.tenantId, jobId, useLLM: Boolean(body?.useLLM) });
+        return json(res, 200, { success: true, data });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'POST' && path === '/api/pilot/seed') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      const tenantId = body?.tenantId;
+      const jobId = body?.jobId;
+      const count = clamp(Number(body?.count || 200), 1, 1000);
+      const job = store.db.jobs[jobId];
+      if (!tenantId || !jobId || !job || job.tenantId !== tenantId) return json(res, 400, { success: false, error: 'tenantId/jobId ungueltig' });
+
+      const created = [];
+      for (let i = 0; i < count; i++) {
+        const demo = generateDemoApplication({ family: job.family });
+        const app = store.createApplication({ tenantId, jobId, candidateName: demo.candidateName, text: demo.text, source: 'xing' });
+        const analysis = await analyzeForJob({ job, text: app.text, useLLM: false });
+        store.updateApplication(app.id, { analysis });
+        created.push(app.id);
+      }
+
+      const cluster = clusterJob(store, { tenantId, jobId });
+      return json(res, 200, { success: true, data: { created: created.length, jobId, cluster } });
+    }
+    if (req.method === 'POST' && path === '/api/pilot/cluster') {
+      const store = await getStore();
+      const body = await parseBody(req);
+      try {
+        const data = clusterJob(store, { tenantId: body?.tenantId, jobId: body?.jobId });
+        return json(res, 200, { success: true, data });
+      } catch (e) {
+        return json(res, 400, { success: false, error: String(e?.message || e) });
+      }
+    }
+    if (req.method === 'GET' && path === '/api/pilot/applications') {
+      const store = await getStore();
+      const tenantId = url.searchParams.get('tenantId');
+      const jobId = url.searchParams.get('jobId');
+      if (!tenantId || !jobId) return json(res, 400, { success: false, error: 'tenantId und jobId erforderlich' });
+
+      const status = url.searchParams.get('status');
+      const mustHave = url.searchParams.get('mustHave'); // pass|fail|null
+      const q = (url.searchParams.get('q') || '').toLowerCase().trim();
+      const collapsed = url.searchParams.get('collapsedClusters') === '1';
+      const sort = url.searchParams.get('sort') || 'submitted_desc';
+      const page = clamp(Number(url.searchParams.get('page') || 1), 1, 9999);
+      const limit = clamp(Number(url.searchParams.get('limit') || 50), 5, 200);
+
+      let apps = Object.values(store.db.applications).filter((a) => a.tenantId === tenantId && a.jobId === jobId);
+      if (status) apps = apps.filter((a) => a.status === status);
+      if (mustHave === 'pass') apps = apps.filter((a) => a.analysis?.mustHave?.passed === true);
+      if (mustHave === 'fail') apps = apps.filter((a) => a.analysis?.mustHave?.passed === false);
+      if (q) apps = apps.filter((a) => (a.candidateName || '').toLowerCase().includes(q));
+      if (collapsed) apps = apps.filter((a) => !a.clusterId || a.isClusterRepresentative);
+
+      if (sort === 'overall_desc') apps.sort((a, b) => (b.analysis?.scores?.overall || 0) - (a.analysis?.scores?.overall || 0));
+      else apps.sort((a, b) => String(b.submittedAt).localeCompare(String(a.submittedAt)));
+
+      const total = apps.length;
+      const start = (page - 1) * limit;
+      const items = apps.slice(start, start + limit).map((a) => ({
+        id: a.id,
+        candidateName: a.candidateName,
+        submittedAt: a.submittedAt,
+        status: a.status,
+        source: a.source,
+        tags: a.tags,
+        scores: a.analysis?.scores || null,
+        mustHavePassed: a.analysis?.mustHave?.passed ?? null,
+        clusterId: a.clusterId,
+        isClusterRepresentative: a.isClusterRepresentative,
+        noteCount: a.notes?.length || 0
+      }));
+
+      const job = store.db.jobs[jobId];
+      const cluster = job?.cluster || null;
+      return json(res, 200, { success: true, data: { page, limit, total, items, cluster } });
+    }
+    if (path.startsWith('/api/pilot/applications/')) {
+      const store = await getStore();
+      const parts = path.split('/').filter(Boolean);
+      const applicationId = parts[3];
+
+      if (req.method === 'GET' && parts.length === 4) {
+        const tenantId = url.searchParams.get('tenantId');
+        const app = store.db.applications[applicationId];
+        if (!app || (tenantId && app.tenantId !== tenantId)) return json(res, 404, { success: false, error: 'application_not_found' });
+        const events = store.db.events.filter((e) => e.applicationId === applicationId).slice(-60);
+        return json(res, 200, { success: true, data: { application: app, events } });
+      }
+
+      if (req.method === 'PATCH' && parts.length === 4) {
+        const body = await parseBody(req);
+        const tenantId = body?.tenantId;
+        const app = store.db.applications[applicationId];
+        if (!app || !tenantId || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
+        const beforeStatus = app.status;
+        const updated = store.updateApplication(applicationId, { status: body?.status, tags: body?.tags });
+        if (body?.status && beforeStatus !== body.status) store.addEvent({ tenantId, jobId: updated.jobId, applicationId, action: 'status_changed', payload: { from: beforeStatus, to: body.status } });
+        return json(res, 200, { success: true, data: updated });
+      }
+
+      if (req.method === 'POST' && parts.length === 5 && parts[4] === 'note') {
+        const body = await parseBody(req);
+        const tenantId = body?.tenantId;
+        const app = store.db.applications[applicationId];
+        if (!app || !tenantId || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
+        const note = store.addNote(applicationId, { text: body?.text });
+        return json(res, 200, { success: true, data: note });
+      }
+
+      if (req.method === 'POST' && parts.length === 6 && parts[4] === 'assessment' && parts[5] === 'send') {
+        const body = await parseBody(req);
+        const tenantId = body?.tenantId;
+        const app = store.db.applications[applicationId];
+        if (!app || !tenantId || app.tenantId !== tenantId) return json(res, 404, { success: false, error: 'application_not_found' });
+        const updated = store.updateApplication(applicationId, { assessment: { sentAt: nowISO() } });
+        store.addEvent({ tenantId, jobId: updated.jobId, applicationId, action: 'assessment_sent', payload: {} });
+        return json(res, 200, { success: true, data: updated.assessment });
+      }
+    }
+
+    if (req.method === 'GET' && path === '/api/triage/demo') {
+      return json(res, 200, { success: true, data: getTriageDemo() });
+    }
+    if (req.method === 'POST' && path === '/api/triage/analyze') {
+      const body = await parseBody(req);
+      if (!body?.applicationText) return json(res, 400, { success: false, error: 'applicationText erforderlich' });
+      const data = body?.useLLM
+        ? await analyzeApplicationWithLLM({ jobFamily: body.jobFamily, applicationText: body.applicationText, rubric: body?.rubric })
+        : analyzeApplication({ jobFamily: body.jobFamily, applicationText: body.applicationText, rubric: body?.rubric });
+      return json(res, 200, { success: true, data });
+    }
+    if (req.method === 'POST' && path === '/api/triage/cluster') {
+      const body = await parseBody(req);
+      const data = clusterApplications({ applications: body?.applications || [], threshold: body?.threshold, shingleSize: body?.shingleSize });
+      return json(res, 200, { success: true, data });
     }
     if (req.method==='GET' && path==='/api/alerts/ghosting/r1') {
       const data = pipelineEntries.filter(p=>p.ghosting_risk_score>50).map(p=>({entryId:p.id,risk:p.ghosting_risk_score,recommendation:p.ghosting_risk_score>70?'Persönlichen Touchpoint setzen (Anruf/LinkedIn)':'Hiring Manager eskalieren – Feedback ausstehend'}));
@@ -334,10 +595,13 @@ const server = createServer(async (req, res) => {
 
   if (path === '/app.js' || path === '/styles.css') return serveStatic(res, path);
   return serveStatic(res, '/');
-});
+};
+
+const server = createServer(handler);
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   server.listen(PORT, () => console.log(`RecruiterIQ läuft auf http://localhost:${PORT}`));
 }
 
 export { server, scoreDealProbability, ghostRisk };
+export { handler };
