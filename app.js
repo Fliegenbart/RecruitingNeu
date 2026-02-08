@@ -1,27 +1,27 @@
 const sections = [
-  { label: 'Recruiting', items: [
-    ['dashboard', 'Dashboard', 'KPIs, Funnel und Pipeline-Health auf einen Blick.'],
-    ['inbox', 'Inbox', 'Bewerbungen sichten, bewerten und weiterleiten.'],
-    ['worklist', 'Worklist', 'Deine priorisierten Aufgaben für heute.'],
-    ['pipeline', 'Pipeline', 'Deal-Scores, Ghosting-Alerts und Stage-Tracking.'],
+  { label: 'Workflow', items: [
+    ['inbox', 'Inbox', 'Bewerbungen sichten: Evidence Pack öffnen und sofort triagieren.'],
+    ['triage', 'Triage', 'Playground: Claims, Flags, Duplikate und Proof-of-Work.'],
+    ['hm', 'HM-Portal', 'Shortlist für Hiring Manager mit Evidence Pack und Entscheidung.'],
+    ['integrations', 'Import / Export', 'CSV-Import, Datenexport und ATS-Anbindung.'],
+    ['worklist', 'Worklist', 'Ihre priorisierten Aufgaben: Rückfragen, HM-Entscheidungen, Assessments.'],
   ]},
   { label: 'Kommunikation', items: [
-    ['copilot', 'KI-Copilot', 'Personalisierte Nachrichten in 3 Tonalitäten generieren.'],
     ['templates', 'Vorlagen', 'E-Mail- und LinkedIn-Templates mit Variablen.'],
     ['sequences', 'Sequenzen', 'Automatische Drip-Kampagnen für Follow-ups.'],
+    ['copilot', 'KI-Copilot', 'Personalisierte Nachrichten in 3 Tonalitäten generieren.'],
   ]},
-  { label: 'Analyse', items: [
-    ['triage', 'Bewerbungs-Triage', 'KI-gestützte Claim-to-Evidence Analyse.'],
-    ['analytics', 'Analytics', 'Time-to-Review, Conversion und Quality-Metriken.'],
-    ['hm', 'HM-Portal', 'Shortlist für Hiring Manager mit Evidence Pack.'],
-  ]},
-  { label: 'Weiteres', items: [
+  { label: 'Insights', items: [
+    ['dashboard', 'Dashboard', 'KPIs, Funnel und Pipeline-Health auf einen Blick.'],
+    ['analytics', 'Analytics', 'Time-to-Review, Conversion und Qualitätsmetriken.'],
+    ['pipeline', 'Pipeline', 'Deal-Scores, Ghosting-Alerts und Stage-Tracking.'],
     ['market', 'Marktdaten', 'Talent-Dichte, Gehälter und Remote-Readiness pro Region.'],
+  ]},
+  { label: 'Erweitert', items: [
     ['agent', 'Kandidatensuche', 'Automatisierte Suche und Shortlist-Erstellung.'],
     ['talent-pool', 'Talent Pool', 'Silbermedaillen-Kandidaten reaktivieren.'],
     ['interviews', 'Interviews', 'Interview-Analyse und Compensation-Fit.'],
     ['companies', 'Unternehmen', 'Hiring Manager Quality Scores.'],
-    ['integrations', 'Import / Export', 'CSV-Import, Datenexport und ATS-Anbindung.'],
   ]},
 ];
 
@@ -86,8 +86,52 @@ async function ensurePilotContext(){
 }
 
 async function loadHome(){
-  const cards = sections.map(s => `
-    <div style='margin-top:28px'>
+  const goCard = (n, title, body, gotoLabel, gotoId) => `
+    <div class='card' style='position:relative;overflow:hidden'>
+      <div class='pill' style='position:absolute;right:14px;top:14px'>Schritt ${esc(n)}</div>
+      <div style='font-size:16px;font-weight:700;margin-bottom:6px'>${esc(title)}</div>
+      <div class='small'>${body}</div>
+      <div class='row' style='margin-top:14px'>
+        <button class='btn primary' data-goto='${esc(gotoId)}'>${esc(gotoLabel)}</button>
+      </div>
+    </div>
+  `;
+
+  const workflow = `
+    <div class='grid2' style='margin-top:14px'>
+      ${goCard(
+        '1',
+        'Inbox öffnen (Job auswählen)',
+        'Wählen Sie Tenant, Team und Job. In der Queue sehen Sie alle Bewerbungen. Klicken Sie eine Bewerbung an, um das Evidence Pack zu öffnen.',
+        'Zur Inbox',
+        'inbox'
+      )}
+      ${goCard(
+        '2',
+        'Signal lesen (Evidence Pack)',
+        'Statt “gut geschrieben” zählt Substanz: Welche Claims sind belegt (Links, Metriken, Artefakte)? Welche sind vage? Flags zeigen Inkonsistenzen und Lücken.',
+        'Beispiele ansehen (Triage)',
+        'triage'
+      )}
+      ${goCard(
+        '3',
+        'Verifizieren (Needs Info + Proof-of-Work)',
+        'Wenn Belege fehlen: “Needs Info” stellt eine gezielte Rückfrage. Proof-of-Work liefert messbare Ergebnisse in 10–15 Minuten und macht KI-Text “prüfbar”.',
+        'Zum HM-Portal',
+        'hm'
+      )}
+      ${goCard(
+        '4',
+        'Entscheiden (HM-Queue)',
+        'Sie geben nicht Bauchgefühl weiter, sondern eine strukturierte Entscheidungsgrundlage: Scorecard, Evidence Pack, Flags, PoW. Entscheidung ist dokumentiert und exportierbar.',
+        'Import/Export',
+        'integrations'
+      )}
+    </div>
+  `;
+
+  const moduleCards = sections.map(s => `
+    <div style='margin-top:18px'>
       <div style='font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-tertiary);margin-bottom:10px'>${esc(s.label)}</div>
       <div class='cards' style='grid-template-columns:repeat(auto-fill,minmax(260px,1fr))'>
         ${s.items.map(([id, label, desc]) => `
@@ -101,12 +145,46 @@ async function loadHome(){
   `).join('');
 
   const html = `
-    <div style='max-width:900px'>
-      <h2 style='font-size:28px;letter-spacing:-0.5px'>RecruiterIQ</h2>
-      <div style='color:var(--text-secondary);margin-top:4px'>
-        Evidence-first Recruiting Intelligence. Wähle einen Bereich, um loszulegen.
+    <div style='max-width:980px'>
+      <h2 style='font-size:28px;letter-spacing:-0.5px;margin:0'>Start</h2>
+      <div style='color:var(--text-secondary);margin-top:6px;max-width:78ch'>
+        RecruiterIQ ist kein KI-Detektor. Es macht Bewerbungen vergleichbar, indem es <strong>Signalqualität</strong> bewertet:
+        Belege, Konsistenz, Ownership und messbare Proof-of-Work Ergebnisse.
       </div>
-      ${cards}
+
+      <div class='card' style='margin-top:14px'>
+        <div style='display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap'>
+          <div style='min-width:280px'>
+            <div style='font-size:16px;font-weight:700;margin-bottom:6px'>Ihr Workflow in 4 Schritten</div>
+            <div class='small'>So nutzen Recruiter das Tool, wenn Bewerbungen “perfekt” wirken, aber schwer zu unterscheiden sind.</div>
+          </div>
+          <div class='row' style='margin-top:0'>
+            <button class='btn' data-goto='worklist'>Worklist</button>
+            <button class='btn primary' data-goto='inbox'>Jetzt starten</button>
+          </div>
+        </div>
+        ${workflow}
+      </div>
+
+      <div class='grid3' style='margin-top:12px'>
+        <div class='card'>
+          <div style='font-size:15px;font-weight:700;margin-bottom:6px'>USP 1: Evidence Pack</div>
+          <div class='small'>Jede Bewerbung wird in Claims zerlegt. Sie sehen sofort: belegt, unklar oder widersprüchlich. Das ersetzt Bauchgefühl durch nachvollziehbare Signale.</div>
+        </div>
+        <div class='card'>
+          <div style='font-size:15px;font-weight:700;margin-bottom:6px'>USP 2: Verifikation statt “KI‑Verdacht”</div>
+          <div class='small'>Wenn Texte zu glatt sind: gezielte Rückfragen (Needs Info) und Proof-of-Work liefern harte Daten. Das ist fairer als “AI detection” und wirkt auch bei echten Kandidaten.</div>
+        </div>
+        <div class='card'>
+          <div style='font-size:15px;font-weight:700;margin-bottom:6px'>USP 3: Workflow-first</div>
+          <div class='small'>Inbox, HM-Queue, Templates/Sequences, Export und Audit-Trail: RecruiterIQ endet nicht beim Score, sondern führt bis zur Entscheidung.</div>
+        </div>
+      </div>
+
+      <details style='margin-top:18px' open>
+        <summary class='small' style='cursor:pointer;color:var(--text-secondary)'>Alle Module anzeigen</summary>
+        ${moduleCards}
+      </details>
     </div>
   `;
 
@@ -940,7 +1018,25 @@ async function loadInbox(){
 
   const html = `
     <h2>Inbox</h2>
-    <div class='small' style='margin-bottom:8px'>Alle Bewerbungen für einen Job. Filtere nach Status oder Must-haves, klicke auf einen Kandidaten für die Detail-Analyse mit Evidence Pack, Claims und Scorecard.</div>
+    <div class='small' style='margin-bottom:8px;max-width:92ch'>Alle Bewerbungen für einen Job. Empfohlener Ablauf: <strong>Job wählen</strong> → links eine Bewerbung anklicken → <strong>Evidence Pack</strong> prüfen → per <strong>Quick Actions</strong> triagieren (Reject / Needs Info / Proof-of-Work / Shortlist) → an den Hiring Manager weitergeben.</div>
+
+    <details class='card' style='margin-top:12px' open>
+      <summary class='small' style='cursor:pointer;color:var(--text-secondary)'>Was Sie hier wirklich tun (und warum das der USP ist)</summary>
+      <div class='grid3' style='margin-top:12px'>
+        <div class='card' style='padding:14px'>
+          <div style='font-weight:700;margin-bottom:4px'>Substanz statt Stil</div>
+          <div class='small'>Das Tool bewertet Belege und Konsistenz, nicht “guten Schreibstil”. Perfekte KI-Texte werden dadurch trotzdem unterscheidbar.</div>
+        </div>
+        <div class='card' style='padding:14px'>
+          <div style='font-weight:700;margin-bottom:4px'>Lücken gezielt schließen</div>
+          <div class='small'>“Needs Info” erzeugt eine konkrete Rückfrage aus Evidence Gaps. Kein Smalltalk, sondern ein schneller Realitätscheck.</div>
+        </div>
+        <div class='card' style='padding:14px'>
+          <div style='font-weight:700;margin-bottom:4px'>Messbar verifizieren</div>
+          <div class='small'>Proof-of-Work gibt Ihnen harte Daten in 10–15 Minuten, ohne die Kandidaten mit Hausaufgaben zu überfordern.</div>
+        </div>
+      </div>
+    </details>
 
     <div class='card' style='margin-top:12px'>
       <div class='row' style='justify-content:space-between;align-items:flex-end'>
