@@ -1547,16 +1547,36 @@ async function loadInbox(){
     $prev.onclick = async () => { state.pilot.filters.page = Math.max(1, state.pilot.filters.page - 1); await refresh(); };
     $next.onclick = async () => { state.pilot.filters.page = state.pilot.filters.page + 1; await refresh(); };
 
-    refresh();
+    const urlParams = new URLSearchParams(location.search || '');
+    const shot = urlParams.get('shot'); // e.g. ?shot=detail for stable screenshots
+    const appId = urlParams.get('appId');
 
-    // Deep-link to a specific application
-    const appId = new URLSearchParams(location.search || '').get('appId');
-    if (appId) {
-      setTimeout(() => {
-        const row = document.querySelector(`tr[data-app='${CSS.escape(appId)}']`);
-        row?.click?.();
-      }, 50);
+    if (shot === 'detail') {
+      // Stable, "hero-shot" friendly default.
+      state.pilot.filters.status = '';
+      state.pilot.filters.mustHave = '';
+      state.pilot.filters.q = '';
+      state.pilot.filters.collapsedClusters = true;
+      state.pilot.filters.sort = 'overall_desc';
+      state.pilot.filters.page = 1;
+      state.pilot.filters.limit = 50;
     }
+
+    (async () => {
+      await refresh();
+
+      if (appId) {
+        setTimeout(() => {
+          const row = document.querySelector(`tr[data-app='${CSS.escape(appId)}']`);
+          row?.click?.();
+        }, 50);
+      } else if (shot === 'detail') {
+        setTimeout(() => {
+          const row = document.querySelector('tr[data-app]');
+          row?.click?.();
+        }, 90);
+      }
+    })();
   };
 
   return { html, afterRender };
