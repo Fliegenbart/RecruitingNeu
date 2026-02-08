@@ -148,7 +148,7 @@ class Store {
     const u2 = this.createUser({ tenantId: tenant1.id, teamId: t1_team2.id, name: 'Sofia Braun', email: 'sofia@acme.example', role: 'recruiter' });
     const u3 = this.createUser({ tenantId: tenant2.id, teamId: t2_team1.id, name: 'Anna Schmitt', email: 'anna@nimbus.example', role: 'recruiter' });
 
-    const hm1 = this.createUser({ tenantId: tenant1.id, teamId: t1_team1.id, name: 'Tobias Krueger', email: 'tobias@acme.example', role: 'hiring_manager' });
+    const hm1 = this.createUser({ tenantId: tenant1.id, teamId: t1_team1.id, name: 'Tobias Krüger', email: 'tobias@acme.example', role: 'hiring_manager' });
     const hm2 = this.createUser({ tenantId: tenant2.id, teamId: t2_team1.id, name: 'Nina Vogt', email: 'nina@nimbus.example', role: 'hiring_manager' });
 
     this.createUser({ tenantId: tenant1.id, teamId: t1_team1.id, name: 'Admin Acme', email: 'admin@acme.example', role: 'admin' });
@@ -166,15 +166,15 @@ class Store {
       tenantId: tenant1.id,
       name: 'Needs Info',
       channel: 'email',
-      subject: 'Kurze Rueckfrage zur Bewerbung: {{jobTitle}}',
+      subject: 'Kurze Rückfrage zur Bewerbung: {{jobTitle}}',
       body: 'Hi {{candidateName}},\\n\\nkurze Frage, damit wir sauber matchen: {{question}}\\n\\nDanke!\\n{{senderName}}'
     });
     this.createTemplate({
       tenantId: tenant1.id,
       name: 'Next Step',
       channel: 'email',
-      subject: 'Naechster Schritt: {{jobTitle}}',
-      body: 'Hi {{candidateName}},\\n\\npasst super. Hast du diese Woche 15 Minuten fuer ein kurzes Screening?\\n\\n{{senderName}}'
+      subject: 'Nächster Schritt: {{jobTitle}}',
+      body: 'Hi {{candidateName}},\\n\\npasst super. Hast du diese Woche 15 Minuten für ein kurzes Screening?\\n\\n{{senderName}}'
     });
 
     this.createTemplate({

@@ -6,7 +6,7 @@ const firstNames = [
   'Luca','Emma','Noah','Mia','Paul','Lina','Elias','Hannah','Felix','Clara','Jonas','Sofia','Ben','Lea','Max','Nina','Tom','Mila'
 ];
 const lastNames = [
-  'Fischer','Richter','Hofmann','Becker','Wagner','Schulz','Neumann','Wolf','Klein','Schreiber','Krueger','Vogt','Hartmann','Braun'
+  'Fischer','Richter','Hofmann','Becker','Wagner','Schulz','Neumann','Wolf','Klein','Schreiber','Krüger','Vogt','Hartmann','Braun'
 ];
 
 const makeName = () => `${pick(firstNames)} ${pick(lastNames)}`;
@@ -14,13 +14,13 @@ const makeName = () => `${pick(firstNames)} ${pick(lastNames)}`;
 const genericOpeners = [
   'Sehr geehrte Damen und Herren,',
   'Hallo Recruiting-Team,',
-  'Mit grossem Interesse bewerbe ich mich auf die ausgeschriebene Position.'
+  'Mit großem Interesse bewerbe ich mich auf die ausgeschriebene Position.'
 ];
 
 const genericTraits = [
   'Ich bin hoch motiviert und bringe eine schnelle Auffassungsgabe mit.',
   'Als Teamplayer arbeite ich strukturiert und detailorientiert.',
-  'Ich freue mich darauf, meine Staerken in einem dynamischen Umfeld einzubringen.'
+  'Ich freue mich darauf, meine Stärken in einem dynamischen Umfeld einzubringen.'
 ];
 
 const softwareEvidenceSnippets = [
@@ -56,13 +56,13 @@ const makeSalesNumbers = () => {
 };
 
 const makeTemplateText = (family) => {
-  const closer = 'Mit freundlichen Gruessen';
+  const closer = 'Mit freundlichen Grüßen';
   const familyLine =
     family === 'software'
       ? 'Ich bringe Erfahrung in moderner Softwareentwicklung mit.'
       : family === 'sales'
-        ? 'Ich bringe starke Kommunikationsfaehigkeiten und Zielorientierung mit.'
-        : 'Ich bin passionate ueber Produktentwicklung und Nutzermehrwert.';
+        ? 'Ich bringe starke Kommunikationsfähigkeiten und Zielorientierung mit.'
+        : 'Ich bin passionate über Produktentwicklung und Nutzermehrwert.';
   return [
     pick(genericOpeners),
     '',
@@ -83,7 +83,7 @@ const makeEvidenceText = (family) => {
       `Projektzeitraum: ${year1}-${year2}.`,
       `Stack: ${pick(softwareEvidenceSnippets)}.`,
       `- ${makeMetricLine()}`,
-      '- CI/CD Pipeline eingefuehrt; Testabdeckung verbessert (Jest).',
+      '- CI/CD Pipeline eingeführt; Testabdeckung verbessert (Jest).',
       '- API Design: REST + Auth; Debugging und Performance-Optimierung.',
       `Portfolio: https://github.com/${randomUUID().slice(0, 8)}`
     ].join('\n');
@@ -136,4 +136,3 @@ export const generateDemoApplication = ({ family }) => {
 
   return { candidateName, text };
 };
-

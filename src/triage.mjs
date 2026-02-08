@@ -27,9 +27,9 @@ const JOB_FAMILIES = {
             "  return scores.sort((a,b)=>a-b).slice(0, n);\n" +
             "}\n" +
             "```\n\n" +
-            'Erwartung: "Top" meint die hoechsten Scores.',
+            'Erwartung: "Top" meint die höchsten Scores.',
           rubric: [
-            'Erkennt, dass sort aufsteigend ist (falsch fuer "top").',
+            'Erkennt, dass sort aufsteigend ist (falsch für "top").',
             'Fix: absteigend sortieren oder slice(-n) nach aufsteigendem Sort.',
             'Hinweis auf Mutationsrisiko: sort() mutiert Array; ggf. copy via [...scores].'
           ]
@@ -38,11 +38,11 @@ const JOB_FAMILIES = {
           title: 'Tradeoff-Entscheidung (Architektur)',
           prompt:
             'Du sollst ein Bewerbungs-Triage Modul bauen: 10.000 Bewerbungen/Tag, ' +
-            'Erklaerbarkeit ist Pflicht, Latenz < 2s fuer "Analyze". ' +
-            'Wuerdest du (A) rein heuristisch starten oder (B) sofort LLM-first? Begruende kurz.',
+            'Erklärbarkeit ist Pflicht, Latenz < 2s für "Analyze". ' +
+            'Würdest du (A) rein heuristisch starten oder (B) sofort LLM-first? Begründe kurz.',
           rubric: [
-            'Beruecksichtigt Erklaerbarkeit/Compliance und False-Positives.',
-            'Schlaegt "Heuristik + optional LLM-Enrichment" vor.',
+            'Berücksichtigt Erklärbarkeit/Compliance und False-Positives.',
+            'Schlägt "Heuristik + optional LLM-Enrichment" vor.',
             'Denkt an Messbarkeit (A/B, Monitoring, Drift).'
           ]
         }
@@ -66,12 +66,12 @@ const JOB_FAMILIES = {
         {
           title: 'Einwandbehandlung (schriftlich)',
           prompt:
-            'Schreibe eine kurze Antwort (max. 8 Saetze) auf den Einwand: ' +
-            '"Wir haben aktuell kein Budget und keine Zeit fuer ein neues Tool." ' +
-            'Ziel: naechster Termin (15 Min) fuer Qualifizierung.',
+            'Schreibe eine kurze Antwort (max. 8 Sätze) auf den Einwand: ' +
+            '"Wir haben aktuell kein Budget und keine Zeit für ein neues Tool." ' +
+            'Ziel: nächster Termin (15 Min) für Qualifizierung.',
           rubric: [
             'Spiegelt Einwand + fragt nach Kontext (Budgetzyklus/Impact).',
-            'Bietet niedrige Huerde (15 Min, konkretes Outcome).',
+            'Bietet niedrige Hürde (15 Min, konkretes Outcome).',
             'Kein Druck, klare CTA.'
           ]
         },
@@ -79,7 +79,7 @@ const JOB_FAMILIES = {
           title: 'Pipeline-Mathe',
           prompt:
             'Du brauchst 6 Deals in 60 Tagen. Conversion von SQL->Won ist 20%. ' +
-            'Wie viele SQLs brauchst du im Zeitraum? Welche 2 Hebel wuerdest du zuerst verbessern?',
+            'Wie viele SQLs brauchst du im Zeitraum? Welche 2 Hebel würdest du zuerst verbessern?',
           rubric: [
             'Rechnet korrekt: 6 / 0.2 = 30 SQLs.',
             'Hebel: mehr SQLs (Top-of-funnel), Conversion verbessern (Qualifizierung, Enablement).',
@@ -107,24 +107,24 @@ const JOB_FAMILIES = {
         {
           title: 'Priorisierung',
           prompt:
-            'Du bekommst 4 Initiativen und 1 KPI: "Activation Rate". Waehle 2, die du in den ' +
-            'naechsten 2 Wochen priorisierst, und begruende kurz (Impact/Confidence/Effort).\n\n' +
+            'Du bekommst 4 Initiativen und 1 KPI: "Activation Rate". Wähle 2, die du in den ' +
+            'nächsten 2 Wochen priorisierst, und begründe kurz (Impact/Confidence/Effort).\n\n' +
             '- Onboarding Schritt 3 vereinfachen\n' +
             '- Neue Integrations-Partnerschaft\n' +
             '- Performance-Optimierung Landing Page\n' +
             '- Neue Admin-Analytics Ansicht',
           rubric: [
-            'Nutzt klares Framework (ICE/RICE) oder aehnlich.',
+            'Nutzt klares Framework (ICE/RICE) oder ähnlich.',
             'Bezieht sich auf KPI und Zeitbox.',
-            'Benennt Unsicherheiten und benoetigte Daten.'
+            'Benennt Unsicherheiten und benötigte Daten.'
           ]
         },
         {
           title: 'Follow-up Fragen an den Hiring Manager',
           prompt:
-            'Formuliere 5 Fragen, die du vor Screening-Start klaeren musst, um Fehl-Screenings zu vermeiden.',
+            'Formuliere 5 Fragen, die du vor Screening-Start klären musst, um Fehl-Screenings zu vermeiden.',
           rubric: [
-            'Fragen zu Must-haves vs nice-to-haves, Senioritaet, KPI des Jobs.',
+            'Fragen zu Must-haves vs nice-to-haves, Seniorität, KPI des Jobs.',
             'Fragen zu Ausschlusskriterien (Standort, Sprache, Arbeitsrecht).',
             'Fragen zur Bewertung (Rubrik) und Prozess.'
           ]
@@ -192,10 +192,10 @@ const DEMO_APPLICATIONS = [
     label: 'Generisch (template)',
     text:
       'Sehr geehrte Damen und Herren,\n\n' +
-      'mit grossem Interesse bewerbe ich mich als Software Engineer. Ich bin hoch motiviert, ' +
-      'teamfaehig und bringe eine schnelle Auffassungsgabe mit. Ich freue mich darauf, meine ' +
-      'Faehigkeiten in einem dynamischen Team einzubringen.\n\n' +
-      'Mit freundlichen Gruessen'
+      'mit großem Interesse bewerbe ich mich als Software Engineer. Ich bin hoch motiviert, ' +
+      'teamfähig und bringe eine schnelle Auffassungsgabe mit. Ich freue mich darauf, meine ' +
+      'Fähigkeiten in einem dynamischen Team einzubringen.\n\n' +
+      'Mit freundlichen Grüßen'
   },
   {
     id: 'app_sw_2',
@@ -205,16 +205,16 @@ const DEMO_APPLICATIONS = [
       'Sehr geehrte Damen und Herren,\n\n' +
       'hiermit bewerbe ich mich als Software Engineer. Ich bin motiviert, teamplayer und ' +
       'lernbereit. Ich freue mich sehr darauf, meine Kenntnisse in einem modernen Umfeld einzusetzen.\n\n' +
-      'Mit freundlichen Gruessen'
+      'Mit freundlichen Grüßen'
   },
   {
     id: 'app_sw_3',
     jobFamily: 'software',
     label: 'Evidenzreich',
     text:
-      'In meinem letzten Projekt habe ich ein TypeScript/Node.js API (REST) fuer ein B2B-Produkt gebaut.\n' +
+      'In meinem letzten Projekt habe ich ein TypeScript/Node.js API (REST) für ein B2B-Produkt gebaut.\n' +
       '- Latenz von 420ms auf 180ms reduziert (p95) durch Query-Optimierung (Postgres) und Caching.\n' +
-      '- CI/CD Pipeline mit Tests (Jest) eingefuehrt; Regression-Bugs -35% in 2 Quartalen.\n' +
+      '- CI/CD Pipeline mit Tests (Jest) eingeführt; Regression-Bugs -35% in 2 Quartalen.\n' +
       'Stack: TypeScript, Node.js, React, Postgres, Docker. Zeitraum: 2023-2025.'
   },
   {
@@ -222,15 +222,15 @@ const DEMO_APPLICATIONS = [
     jobFamily: 'sales',
     label: 'Generisch (template)',
     text:
-      'Ich bin sehr begeistert von der Position im Sales und moechte meine Kommunikationsstaerke ' +
-      'und Teamfaehigkeit einbringen. Ich arbeite zielorientiert und freue mich auf neue Herausforderungen.'
+      'Ich bin sehr begeistert von der Position im Sales und möchte meine Kommunikationsstärke ' +
+      'und Teamfähigkeit einbringen. Ich arbeite zielorientiert und freue mich auf neue Herausforderungen.'
   },
   {
     id: 'app_sales_2',
     jobFamily: 'sales',
     label: 'Evidenzreich',
     text:
-      'Letztes Jahr habe ich 1.2M EUR Neugeschaeft (ARR) abgeschlossen (Quota 1.0M, 120%).\n' +
+      'Letztes Jahr habe ich 1.2M EUR Neugeschäft (ARR) abgeschlossen (Quota 1.0M, 120%).\n' +
       'Ich arbeite in Salesforce, baue Pipeline via Outbound und Partner, und verbessere Conversion ' +
       'durch saubere Discovery (MEDDIC). Durchschnittlicher Sales Cycle: 42 Tage.'
   },
@@ -239,7 +239,7 @@ const DEMO_APPLICATIONS = [
     jobFamily: 'sales',
     label: 'Evidenzreich (Duplikat-Cluster)',
     text:
-      'Letztes Jahr habe ich 1.2M EUR Neugeschaeft (ARR) abgeschlossen (Quota 1.0M, 120%).\n' +
+      'Letztes Jahr habe ich 1.2M EUR Neugeschäft (ARR) abgeschlossen (Quota 1.0M, 120%).\n' +
       'Ich arbeite in Salesforce, baue Pipeline via Outbound und Partner, und verbessere Conversion ' +
       'durch saubere Discovery (MEDDIC). Durchschnittlicher Sales Cycle: 42 Tage.'
   },
@@ -248,7 +248,7 @@ const DEMO_APPLICATIONS = [
     jobFamily: 'pm',
     label: 'Generisch (template)',
     text:
-      'Ich bin passionate ueber Produktentwicklung und moechte in einem dynamischen Team arbeiten. ' +
+      'Ich bin passionate über Produktentwicklung und möchte in einem dynamischen Team arbeiten. ' +
       'Ich bin detailorientiert, lerne schnell und bringe eine positive Einstellung mit.'
   },
   {
@@ -491,12 +491,12 @@ const contradictionChecks = (text) => {
   // Timeline: too many different years without context can indicate fabricated/templated narrative.
   const years = Array.from(t.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => Number(m[1]));
   const uniqYears = Array.from(new Set(years)).sort((a, b) => a - b);
-  if (uniqYears.length >= 6) flags.push({ id: 'many_years', severity: 'low', message: 'Viele Jahreszahlen; Timeline/Zeitraeume im Interview verifizieren.' });
+  if (uniqYears.length >= 6) flags.push({ id: 'many_years', severity: 'low', message: 'Viele Jahreszahlen; Timeline/Zeiträume im Interview verifizieren.' });
 
   // Link presence can be good; absence is not bad. But "portfolio mentioned" without link is a flag.
   const mentionsPortfolio = /\b(portfolio|github|gitlab|projekt)\b/i.test(t);
   const hasLink = /https?:\/\/\S+/i.test(t);
-  if (mentionsPortfolio && !hasLink) flags.push({ id: 'portfolio_no_link', severity: 'low', message: 'Portfolio/Projekt erwaehnt, aber kein Link angegeben.' });
+  if (mentionsPortfolio && !hasLink) flags.push({ id: 'portfolio_no_link', severity: 'low', message: 'Portfolio/Projekt erwähnt, aber kein Link angegeben.' });
 
   return flags;
 };

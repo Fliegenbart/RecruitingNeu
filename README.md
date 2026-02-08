@@ -51,7 +51,7 @@ Enthält lokale Server-Tests **und** Serverless-API-Tests für `api/[...route].m
 
 ### Lokale Open-Source Modelle (optional)
 
-Die Triage funktioniert ohne LLM. Fuer "Enrichment" (zusaetzliche Claims/Follow-ups) kann lokal Ollama genutzt werden:
+Die Triage funktioniert ohne LLM. Für "Enrichment" (zusätzliche Claims/Follow-ups) kann lokal Ollama genutzt werden:
 
 ```bash
 TRIAGE_USE_OLLAMA=1 OLLAMA_MODEL=llama3.2:3b node src/server.mjs

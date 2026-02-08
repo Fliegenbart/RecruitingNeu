@@ -2,21 +2,21 @@ const sections = [
   { label: 'Recruiting', items: [
     ['dashboard', 'Dashboard', 'KPIs, Funnel und Pipeline-Health auf einen Blick.'],
     ['inbox', 'Inbox', 'Bewerbungen sichten, bewerten und weiterleiten.'],
-    ['worklist', 'Worklist', 'Deine priorisierten Aufgaben fuer heute.'],
+    ['worklist', 'Worklist', 'Deine priorisierten Aufgaben für heute.'],
     ['pipeline', 'Pipeline', 'Deal-Scores, Ghosting-Alerts und Stage-Tracking.'],
   ]},
   { label: 'Kommunikation', items: [
-    ['copilot', 'KI-Copilot', 'Personalisierte Nachrichten in 3 Tonalitaeten generieren.'],
+    ['copilot', 'KI-Copilot', 'Personalisierte Nachrichten in 3 Tonalitäten generieren.'],
     ['templates', 'Vorlagen', 'E-Mail- und LinkedIn-Templates mit Variablen.'],
-    ['sequences', 'Sequenzen', 'Automatische Drip-Kampagnen fuer Follow-ups.'],
+    ['sequences', 'Sequenzen', 'Automatische Drip-Kampagnen für Follow-ups.'],
   ]},
   { label: 'Analyse', items: [
-    ['triage', 'Bewerbungs-Triage', 'KI-gestuetzte Claim-to-Evidence Analyse.'],
+    ['triage', 'Bewerbungs-Triage', 'KI-gestützte Claim-to-Evidence Analyse.'],
     ['analytics', 'Analytics', 'Time-to-Review, Conversion und Quality-Metriken.'],
-    ['hm', 'HM-Portal', 'Shortlist fuer Hiring Manager mit Evidence Pack.'],
+    ['hm', 'HM-Portal', 'Shortlist für Hiring Manager mit Evidence Pack.'],
   ]},
   { label: 'Weiteres', items: [
-    ['market', 'Marktdaten', 'Talent-Dichte, Gehaelter und Remote-Readiness pro Region.'],
+    ['market', 'Marktdaten', 'Talent-Dichte, Gehälter und Remote-Readiness pro Region.'],
     ['agent', 'Kandidatensuche', 'Automatisierte Suche und Shortlist-Erstellung.'],
     ['talent-pool', 'Talent Pool', 'Silbermedaillen-Kandidaten reaktivieren.'],
     ['interviews', 'Interviews', 'Interview-Analyse und Compensation-Fit.'],
@@ -104,7 +104,7 @@ async function loadHome(){
     <div style='max-width:900px'>
       <h2 style='font-size:28px;letter-spacing:-0.5px'>RecruiterIQ</h2>
       <div style='color:var(--text-secondary);margin-top:4px'>
-        Evidence-first Recruiting Intelligence. Waehle einen Bereich, um loszulegen.
+        Evidence-first Recruiting Intelligence. Wähle einen Bereich, um loszulegen.
       </div>
       ${cards}
     </div>
@@ -140,7 +140,7 @@ async function loadPipeline(){
 async function loadCopilot(){
   const html = `
     <h2>KI-Copilot</h2>
-    <div class='small' style='margin-bottom:8px'>Waehle einen Kandidaten und Job, und der Copilot generiert 3 personalisierte Nachrichten (direkt, beratend, visionaer). Mit lokalem LLM werden die Texte individuell formuliert, ohne LLM kommen Fallback-Templates.</div>
+    <div class='small' style='margin-bottom:8px'>Wähle einen Kandidaten und Job, und der Copilot generiert 3 personalisierte Nachrichten (direkt, beratend, visionär). Mit lokalem LLM werden die Texte individuell formuliert, ohne LLM kommen Fallback-Templates.</div>
     <div class='card' style='margin-top:12px'>
       <div class='grid3'>
         <div><div class='small'>Kandidat</div><select id='copilotCand'></select></div>
@@ -177,7 +177,7 @@ async function loadCopilot(){
 
 async function loadMarket(){
   const data=await fetchJSON('/api/market/heatmap?role=Software%20Engineer');
-  return `<h2>Marktdaten</h2><div class='small' style='margin-bottom:16px'>Talent-Dichte, Median-Gehaelter und Remote-Readiness pro Region. Hilft bei Gehaltsverhandlungen und Standortentscheidungen.</div><div class='card'><table class='table'><tr><th>Region</th><th>Dichte</th><th>Median</th><th>Remote %</th></tr>${data.data.slice(0,16).map(m=>`<tr><td>${m.region}</td><td>${m.talent_density}</td><td>€${m.median_salary}</td><td>${m.remote_readiness_pct}%</td></tr>`).join('')}</table></div>`;
+  return `<h2>Marktdaten</h2><div class='small' style='margin-bottom:16px'>Talent-Dichte, Median-Gehälter und Remote-Readiness pro Region. Hilft bei Gehaltsverhandlungen und Standortentscheidungen.</div><div class='card'><table class='table'><tr><th>Region</th><th>Dichte</th><th>Median</th><th>Remote %</th></tr>${data.data.slice(0,16).map(m=>`<tr><td>${m.region}</td><td>${m.talent_density}</td><td>€${m.median_salary}</td><td>${m.remote_readiness_pct}%</td></tr>`).join('')}</table></div>`;
 }
 
 async function loadAgent(){
@@ -188,18 +188,18 @@ async function loadAgent(){
 
 async function loadSilver(){
   const pool=await fetchJSON('/api/silver-medals');
-  return `<h2>Talent Pool</h2><div class='small' style='margin-bottom:16px'>Kandidaten, die in frueheren Prozessen knapp gescheitert sind ("Silbermedaillen"). Ideal fuer schnelle Nachbesetzungen.</div><div class='card'><table class='table'><tr><th>ID</th><th>Kandidat</th><th>Rang</th></tr>${pool.data.map(s=>`<tr><td>${s.id}</td><td>${s.candidate_id}</td><td>${s.shortlist_position}</td></tr>`).join('')}</table></div>`;
+  return `<h2>Talent Pool</h2><div class='small' style='margin-bottom:16px'>Kandidaten, die in früheren Prozessen knapp gescheitert sind ("Silbermedaillen"). Ideal für schnelle Nachbesetzungen.</div><div class='card'><table class='table'><tr><th>ID</th><th>Kandidat</th><th>Rang</th></tr>${pool.data.map(s=>`<tr><td>${s.id}</td><td>${s.candidate_id}</td><td>${s.shortlist_position}</td></tr>`).join('')}</table></div>`;
 }
 
 async function loadCompanies(){
   const score=await fetchJSON('/api/hiring-managers/hm1/score');
-  return `<h2>Unternehmen</h2><div class='small' style='margin-bottom:16px'>Quality Score fuer Hiring Manager: Feedback-Geschwindigkeit, Interview-Konsistenz und Offer-Conversion im Ueberblick.</div><div class='card'><div>Score: ${score.data.score} (${score.data.grade})</div><pre>${JSON.stringify(score.data.breakdown,null,2)}</pre></div>`;
+  return `<h2>Unternehmen</h2><div class='small' style='margin-bottom:16px'>Quality Score für Hiring Manager: Feedback-Geschwindigkeit, Interview-Konsistenz und Offer-Conversion im Überblick.</div><div class='card'><div>Score: ${score.data.score} (${score.data.grade})</div><pre>${JSON.stringify(score.data.breakdown,null,2)}</pre></div>`;
 }
 
 async function loadInterviews(){
   const analyzed=await fetchJSON('/api/interviews/int1/analyze',{method:'POST'});
   const comp=await fetchJSON('/api/compensation/pe1/predict');
-  return `<h2>Interviews</h2><div class='small' style='margin-bottom:16px'>Interview-Analyse (Kompetenz-Scores, Sentiment, Red Flags) und Compensation-Fit Prognose fuer aktuelle Kandidaten.</div><div class='grid2'><div class='card'><h3>Interview Analyse</h3><p>${analyzed.data.notes_summary}</p><pre>${JSON.stringify(analyzed.data.competency_scores,null,2)}</pre></div><div class='card'><h3>Compensation</h3><div>Fit: ${comp.data.fit}</div><div>Gap: €${comp.data.gap}</div><ul>${comp.data.negotiation_tips.map(t=>`<li>${t}</li>`).join('')}</ul></div></div>`;
+  return `<h2>Interviews</h2><div class='small' style='margin-bottom:16px'>Interview-Analyse (Kompetenz-Scores, Sentiment, Red Flags) und Compensation-Fit Prognose für aktuelle Kandidaten.</div><div class='grid2'><div class='card'><h3>Interview Analyse</h3><p>${analyzed.data.notes_summary}</p><pre>${JSON.stringify(analyzed.data.competency_scores,null,2)}</pre></div><div class='card'><h3>Compensation</h3><div>Fit: ${comp.data.fit}</div><div>Gap: €${comp.data.gap}</div><ul>${comp.data.negotiation_tips.map(t=>`<li>${t}</li>`).join('')}</ul></div></div>`;
 }
 
 async function loadWorklist(){
@@ -212,7 +212,7 @@ async function loadWorklist(){
 
   const html = `
     <h2>Worklist</h2>
-    <div class='small' style='margin-bottom:8px'>Deine priorisierten Aufgaben fuer heute. Klick auf einen Kandidaten oeffnet ihn direkt in der Inbox.</div>
+    <div class='small' style='margin-bottom:8px'>Deine priorisierten Aufgaben für heute. Klick auf einen Kandidaten öffnet ihn direkt in der Inbox.</div>
     <div class='card' style='margin-top:12px'>
       <div class='grid2'>
         <div>
@@ -586,7 +586,7 @@ async function loadIntegrations(){
 
   const html = `
     <h2>Import / Export</h2>
-    <div class='small' style='margin-bottom:8px'>Bewerbungen per CSV importieren (bis 1.000 Zeilen). Exportiere Bewerbungs- und Audit-Daten als CSV fuer dein ATS.</div>
+    <div class='small' style='margin-bottom:8px'>Bewerbungen per CSV importieren (bis 1.000 Zeilen). Exportiere Bewerbungs- und Audit-Daten als CSV für dein ATS.</div>
     <div class='card' style='margin-top:12px'>
       <div class='grid2'>
         <div>
@@ -940,7 +940,7 @@ async function loadInbox(){
 
   const html = `
     <h2>Inbox</h2>
-    <div class='small' style='margin-bottom:8px'>Alle Bewerbungen fuer einen Job. Filtere nach Status oder Must-haves, klicke auf einen Kandidaten fuer die Detail-Analyse mit Evidence Pack, Claims und Scorecard.</div>
+    <div class='small' style='margin-bottom:8px'>Alle Bewerbungen für einen Job. Filtere nach Status oder Must-haves, klicke auf einen Kandidaten für die Detail-Analyse mit Evidence Pack, Claims und Scorecard.</div>
 
     <div class='card' style='margin-top:12px'>
       <div class='row' style='justify-content:space-between;align-items:flex-end'>
@@ -1025,7 +1025,7 @@ async function loadInbox(){
         <div id='inboxTableWrap' style='margin-top:10px'>Lade...</div>
       </div>
       <div id='inboxDetail'>
-        <div class='card'>Waehle links eine Bewerbung aus.</div>
+        <div class='card'>Wähle links eine Bewerbung aus.</div>
       </div>
     </div>
   `;
@@ -1677,9 +1677,9 @@ async function loadInbox(){
             if (has('years_suspicious')) lines.push('Koennen Sie Ihre Zeitlinie kurz auflisten (Jahr/Arbeitgeber/Rolle), damit wir das sauber matchen koennen?');
 
             // Job-family specific proof point
-            if (job?.family === 'software') lines.push('Optional: Koennen Sie einen kurzen Code-Ausschnitt oder ein PR/Commit verlinken, das Sie verantwortet haben?');
-            if (job?.family === 'sales') lines.push('Optional: Koennen Sie 1-2 konkrete Deals/Targets (Groessenordnung) und Ihren Beitrag dazu kurz beschreiben?');
-            if (job?.family === 'pm') lines.push('Optional: Koennen Sie 1 Beispiel fuer ein Feature nennen (Ziel/Metrik/Experiment), das Sie end-to-end verantwortet haben?');
+            if (job?.family === 'software') lines.push('Optional: Können Sie einen kurzen Code-Ausschnitt oder ein PR/Commit verlinken, das Sie verantwortet haben?');
+            if (job?.family === 'sales') lines.push('Optional: Können Sie 1-2 konkrete Deals/Targets (Größenordnung) und Ihren Beitrag dazu kurz beschreiben?');
+            if (job?.family === 'pm') lines.push('Optional: Können Sie 1 Beispiel für ein Feature nennen (Ziel/Metrik/Experiment), das Sie end-to-end verantwortet haben?');
 
             // Keep to a small number of lines.
             return lines.slice(0, 5).join('\\n');
@@ -1731,7 +1731,7 @@ async function loadInbox(){
     $job.onchange = async () => {
       state.pilot.jobId = $job.value;
       state.pilot.filters.page = 1;
-      $detail.innerHTML = `<div class='card'>Waehle links eine Bewerbung aus.</div>`;
+      $detail.innerHTML = `<div class='card'>Wähle links eine Bewerbung aus.</div>`;
       await refresh();
     };
 
@@ -1832,7 +1832,7 @@ async function loadTriage(){
 
   const html = `
     <h2>Bewerbungs-Triage</h2>
-    <div class='small' style='margin-bottom:8px'>Playground: Fuege einen Bewerbungstext ein und sieh, wie die KI Claims extrahiert, Evidenz bewertet und Proof-of-Work Aufgaben generiert. Optional mit lokalem LLM fuer semantisches Skill-Matching.</div>
+    <div class='small' style='margin-bottom:8px'>Playground: Füge einen Bewerbungstext ein und sieh, wie die KI Claims extrahiert, Evidenz bewertet und Proof-of-Work Aufgaben generiert. Optional mit lokalem LLM für semantisches Skill-Matching.</div>
     <div class='split' style='margin-top:12px'>
       <div class='card'>
         <div class='grid2'>
@@ -2059,7 +2059,7 @@ async function render(){
   const breadcrumb = current === 'home'
     ? ''
     : `<div class='small' style='display:flex;align-items:center;gap:6px'>
-        <span class='click' id='backHome' style='color:var(--primary);cursor:pointer'>Uebersicht</span>
+        <span class='click' id='backHome' style='color:var(--primary);cursor:pointer'>Übersicht</span>
         <span style='color:var(--text-tertiary)'>/</span>
         <span>${esc(pageInfo?.label || current)}</span>
       </div>`;
