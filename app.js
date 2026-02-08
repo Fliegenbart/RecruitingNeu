@@ -35,7 +35,7 @@ const fetchJSON = (url, opts={}) => {
   const headers = { ...(opts.headers || {}), ...authHeader() };
   return fetch(url, { ...opts, headers }).then(r=>r.json());
 };
-const badge = (v)=> v>70?'<span class="badge green">🟢 '+v+'</span>':v>=40?'<span class="badge yellow">🟡 '+v+'</span>':'<span class="badge red">🔴 '+v+'</span>';
+const badge = (v)=> v>70?'<span class="badge green">'+v+'</span>':v>=40?'<span class="badge yellow">'+v+'</span>':'<span class="badge red">'+v+'</span>';
 const badgeScore = (v, goodHigh=true)=>{
   const n = Number(v || 0);
   const score = goodHigh ? n : (100 - n);

@@ -189,7 +189,9 @@ const analytics = { direct: { sent: 9, responses: 4 }, advisory: { sent: 10, res
 
 const serveStatic = async (res, path) => {
   try {
-    const filePath = path === '/' ? 'public/index.html' : `public${path}`;
+    // Keep static assets at repo root so Vercel (@vercel/static) and local server use the same files.
+    // Only these 3 are served directly; all other paths fall back to index.html (SPA routing).
+    const filePath = path === '/' ? 'index.html' : String(path || '').replace(/^\/+/, '');
     const content = await readFile(join(process.cwd(), filePath));
     const types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
     const ct = types[extname(filePath)] || 'text/plain';
@@ -1178,7 +1180,9 @@ const handler = async (req, res) => {
     return json(res, 404, { success: false, error: 'Route nicht gefunden' });
   }
 
+  if (path === '/' || path === '/index.html') return serveStatic(res, '/');
   if (path === '/app.js' || path === '/styles.css') return serveStatic(res, path);
+  // SPA fallback
   return serveStatic(res, '/');
 };
 

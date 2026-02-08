@@ -5,7 +5,9 @@ Funktionsfähiger Prototyp eines Recruiting Intelligence OS mit 12 Modulen als i
 ## Start
 
 ```bash
-node src/server.mjs
+npm run start
+# oder (Auto-Reload)
+npm run dev
 ```
 
 Dann im Browser: http://localhost:3000
@@ -27,10 +29,10 @@ DB_PATH=/tmp/recruiteriq-db.json node src/server.mjs
 ## Tests
 
 ```bash
-node --test tests/*.test.mjs
+npm test
+```
 
 Enthält lokale Server-Tests **und** Serverless-API-Tests für `api/[...route].mjs`.
-```
 
 ## Abgedeckte Module
 
